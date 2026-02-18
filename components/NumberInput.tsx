@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Plus, Minus } from 'lucide-react';
 import { formatTime } from '../utils/timeUtils';
 
@@ -9,7 +9,7 @@ interface NumberInputProps {
   min?: number;
   max?: number;
   step?: number;
-  isTime?: boolean; // if true, format as MM:SS, else just number
+  isTime?: boolean;
   readOnly?: boolean;
 }
 
@@ -23,119 +23,150 @@ export const NumberInput: React.FC<NumberInputProps> = ({
   isTime = true,
   readOnly = false,
 }) => {
-  const [localValue, setLocalValue] = useState('');
-  const [isEditing, setIsEditing] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const formatValue = (v: number) => (isTime ? formatTime(v) : v.toString());
 
-  // Sync local value when prop value changes and not editing
+  const [localValue, setLocalValue] = useState(formatValue(value));
+  const inputRef = useRef<HTMLInputElement>(null);
+  const longPressTimerRef = useRef<number | null>(null);
+  const longPressIntervalRef = useRef<number | null>(null);
+
   useEffect(() => {
-    if (!isEditing) {
-      setLocalValue(isTime ? formatTime(value) : value.toString());
-    }
-  }, [value, isTime, isEditing]);
+    setLocalValue(formatValue(value));
+  }, [value, isTime]);
 
   const parseAndCommit = (inputValue: string) => {
-    let newValue = value;
-    
-    // Remove whitespace
     const cleanVal = inputValue.trim();
+    let newValue: number;
 
     if (isTime && cleanVal.includes(':')) {
-       // Parse MM:SS
-       const parts = cleanVal.split(':');
-       const m = parseInt(parts[0], 10) || 0;
-       const s = parseInt(parts[1], 10) || 0;
-       newValue = m * 60 + s;
+      const parts = cleanVal.split(':');
+      const m = parseInt(parts[0], 10) || 0;
+      const s = parseInt(parts[1], 10) || 0;
+      newValue = m * 60 + s;
     } else {
-       // Treat as total seconds (or raw number for Rounds)
-       newValue = parseInt(cleanVal, 10);
+      newValue = parseInt(cleanVal, 10);
     }
 
-    if (isNaN(newValue)) {
-        // Revert to previous value if invalid
-        newValue = value; 
-    }
-
-    // Clamp values
-    if (newValue < min) newValue = min;
-    if (newValue > max) newValue = max;
+    if (isNaN(newValue)) newValue = value;
+    newValue = Math.max(min, Math.min(max, newValue));
 
     onChange(newValue);
-    setLocalValue(isTime ? formatTime(newValue) : newValue.toString());
-    setIsEditing(false);
+    setLocalValue(formatValue(newValue));
   };
 
-  const handleBlur = () => {
-    if (isEditing) {
-        parseAndCommit(localValue);
-    }
-  };
+  const handleBlur = () => parseAndCommit(localValue);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      inputRef.current?.blur();
-    }
+    if (e.key === 'Enter') inputRef.current?.blur();
   };
 
   const handleFocus = () => {
-    if (!readOnly) {
-        setIsEditing(true);
-        // Small delay to ensure focus event completes before selection
-        setTimeout(() => inputRef.current?.select(), 0);
+    if (!readOnly) setTimeout(() => inputRef.current?.select(), 0);
+  };
+
+  const handleIncrement = useCallback(() => {
+    if (!readOnly && value + step <= max) {
+      onChange(value + step);
     }
-  };
+  }, [readOnly, value, step, max, onChange]);
 
-  const handleIncrement = () => {
-    if (!readOnly && value + step <= max) onChange(value + step);
-  };
+  const handleDecrement = useCallback(() => {
+    if (!readOnly && value - step >= min) {
+      onChange(value - step);
+    }
+  }, [readOnly, value, step, min, onChange]);
 
-  const handleDecrement = () => {
-    if (!readOnly && value - step >= min) onChange(value - step);
-  };
+  const startLongPress = useCallback((action: () => void) => {
+    longPressTimerRef.current = window.setTimeout(() => {
+      longPressIntervalRef.current = window.setInterval(() => {
+        action();
+      }, 80);
+    }, 400);
+  }, []);
+
+  const stopLongPress = useCallback(() => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    if (longPressIntervalRef.current) {
+      clearInterval(longPressIntervalRef.current);
+      longPressIntervalRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      stopLongPress();
+    };
+  }, [stopLongPress]);
 
   return (
-    <div className="flex items-center justify-between mb-3 bg-gray-800 rounded-lg overflow-hidden shadow-lg border border-gray-700">
-      <div className="bg-sky-900 w-32 px-4 py-4 flex items-center h-full border-r border-gray-700 shrink-0">
-        <span className="text-white font-bold text-sm tracking-wider uppercase">{label}</span>
-      </div>
-      
-      <div className="flex-1 flex justify-center items-center bg-white px-2 py-2 relative">
-        <input
-            ref={inputRef}
-            type="text"
-            value={isEditing ? localValue : (isTime ? formatTime(value) : value)}
-            onChange={(e) => setLocalValue(e.target.value)}
-            onBlur={handleBlur}
-            onFocus={handleFocus}
-            onKeyDown={handleKeyDown}
-            readOnly={readOnly}
-            className={`w-full text-center text-gray-900 font-mono text-xl font-bold bg-transparent outline-none ${readOnly ? 'cursor-default' : 'cursor-text'}`}
-            aria-label={`Enter ${label}`}
-        />
-      </div>
+    <div className="bg-surface-container rounded-xl overflow-hidden border border-outline-variant">
+      <div className="flex items-stretch">
+        {/* Label */}
+        <div className="bg-surface-container-high px-4 py-3 flex items-center min-w-[90px] border-r border-outline-variant">
+          <span className="text-primary text-sm font-medium">
+            {label}
+          </span>
+        </div>
 
-      <div className="flex items-center bg-gray-800 h-14 w-[112px] justify-center shrink-0">
-        {!readOnly ? (
-          <>
+        {/* Value */}
+        <div className="flex-1 flex items-center justify-center px-4 py-3">
+          {readOnly ? (
+            <span className="text-on-surface font-mono text-lg font-semibold">
+              {localValue}
+            </span>
+          ) : (
+            <input
+              ref={inputRef}
+              type="text"
+              value={localValue}
+              onChange={(e) => setLocalValue(e.target.value)}
+              onBlur={handleBlur}
+              onFocus={handleFocus}
+              onKeyDown={handleKeyDown}
+              className="w-full text-center text-on-surface font-mono text-lg font-semibold bg-transparent outline-none"
+              aria-label={`Enter ${label}`}
+            />
+          )}
+        </div>
+
+        {/* Buttons */}
+        {!readOnly && (
+          <div className="flex items-stretch border-l border-outline-variant">
             <button
               onClick={handleDecrement}
-              className="w-14 h-14 flex items-center justify-center bg-white text-sky-900 border-l border-gray-300 active:bg-gray-200 transition-colors hover:bg-gray-50"
+              onMouseDown={() => startLongPress(handleDecrement)}
+              onMouseUp={stopLongPress}
+              onMouseLeave={stopLongPress}
+              onTouchStart={() => startLongPress(handleDecrement)}
+              onTouchEnd={stopLongPress}
+              className="w-12 flex items-center justify-center bg-surface-container-high text-on-surface-variant hover:text-on-surface active:bg-surface-container-highest transition-colors touch-manipulation"
               aria-label={`Decrease ${label}`}
-              tabIndex={-1} 
+              tabIndex={-1}
             >
-              <Minus size={24} strokeWidth={4} />
+              <Minus size={18} />
             </button>
+            <div className="w-px bg-outline-variant" />
             <button
               onClick={handleIncrement}
-              className="w-14 h-14 flex items-center justify-center bg-white text-sky-900 border-l border-gray-300 active:bg-gray-200 transition-colors hover:bg-gray-50"
+              onMouseDown={() => startLongPress(handleIncrement)}
+              onMouseUp={stopLongPress}
+              onMouseLeave={stopLongPress}
+              onTouchStart={() => startLongPress(handleIncrement)}
+              onTouchEnd={stopLongPress}
+              className="w-12 flex items-center justify-center bg-surface-container-high text-on-surface-variant hover:text-on-surface active:bg-surface-container-highest transition-colors touch-manipulation"
               aria-label={`Increase ${label}`}
               tabIndex={-1}
             >
-              <Plus size={24} strokeWidth={4} />
+              <Plus size={18} />
             </button>
-          </>
-        ) : (
-          <div className="w-full h-full bg-gray-800 border-l border-gray-700" />
+          </div>
+        )}
+
+        {readOnly && (
+          <div className="w-[97px] bg-surface-container-high border-l border-outline-variant" />
         )}
       </div>
     </div>

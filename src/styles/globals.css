@@ -1,0 +1,111 @@
+@import "tailwindcss";
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;500;700&display=swap');
+
+@theme {
+  /* Surfaces */
+  --color-surface: #1a1a1a;
+  --color-surface-dim: #141414;
+  --color-surface-bright: #252525;
+  --color-surface-container: #1e1e1e;
+  --color-surface-container-high: #282828;
+  --color-surface-container-highest: #333333;
+
+  /* Primary */
+  --color-primary: #38bdf8;
+
+  /* Phase colors */
+  --color-phase-prep-DEFAULT: #f59e0b;
+  --color-phase-prep-dark: #92400e;
+
+  --color-phase-work-DEFAULT: #22c55e;
+  --color-phase-work-dark: #166534;
+
+  --color-phase-rest-DEFAULT: #ef4444;
+  --color-phase-rest-dark: #991b1b;
+
+  --color-phase-cooldown-DEFAULT: #3b82f6;
+  --color-phase-cooldown-dark: #1e40af;
+
+  --color-phase-finished-DEFAULT: #a855f7;
+  --color-phase-finished-dark: #6b21a8;
+
+  /* Text colors */
+  --color-on-surface: #ffffff;
+  --color-on-surface-variant: #a1a1aa;
+  --color-outline: #3f3f46;
+  --color-outline-variant: #27272a;
+
+  /* Typography */
+  --font-family-sans: 'Inter', system-ui, sans-serif;
+  --font-family-mono: 'Roboto Mono', monospace;
+
+  --font-size-timer-huge: 8rem;
+  --font-size-timer-large: 6rem;
+}
+
+@layer base {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    background-color: var(--color-surface);
+    color: var(--color-on-surface);
+    font-family: var(--font-family-sans);
+    overscroll-behavior: none;
+  }
+
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  /* Phase backgrounds for active timer */
+  .phase-gradient-prep {
+    background: linear-gradient(180deg, #f59e0b 0%, #92400e 100%);
+  }
+
+  .phase-gradient-work {
+    background: linear-gradient(180deg, #22c55e 0%, #166534 100%);
+  }
+
+  .phase-gradient-rest {
+    background: linear-gradient(180deg, #ef4444 0%, #991b1b 100%);
+  }
+
+  .phase-gradient-cooldown {
+    background: linear-gradient(180deg, #3b82f6 0%, #1e40af 100%);
+  }
+
+  .phase-gradient-finished {
+    background: linear-gradient(180deg, #a855f7 0%, #6b21a8 100%);
+  }
+}
+
+@layer utilities {
+  .touch-manipulation {
+    touch-action: manipulation;
+  }
+}

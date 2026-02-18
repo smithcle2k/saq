@@ -7,22 +7,11 @@ export interface TimerConfig {
 }
 
 export enum TimerPhase {
-  IDLE = 'IDLE',
   PREP = 'PREP',
   WORK = 'WORK',
   REST = 'REST',
   COOL_DOWN = 'COOL_DOWN',
   FINISHED = 'FINISHED',
-}
-
-export interface WorkoutState {
-  phase: TimerPhase;
-  currentRound: number;
-  timeRemaining: number;
-  totalTimeElapsed: number;
-  isRunning: boolean;
-  isPaused: boolean;
-  currentExercise: string | null;
 }
 
 export interface WorkoutHistoryItem {
@@ -31,3 +20,18 @@ export interface WorkoutHistoryItem {
 }
 
 export type View = 'SETUP' | 'TIMER' | 'SETTINGS' | 'STATS';
+
+// Screen Wake Lock API types
+declare global {
+  interface Navigator {
+    wakeLock?: {
+      request(type: 'screen'): Promise<WakeLockSentinel>;
+    };
+  }
+
+  interface WakeLockSentinel extends EventTarget {
+    readonly released: boolean;
+    readonly type: 'screen';
+    release(): Promise<void>;
+  }
+}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { TimerConfig, View, WorkoutHistoryItem } from './types';
 import { TimerSetup } from './components/TimerSetup';
 import { ActiveTimer } from './components/ActiveTimer';
@@ -8,8 +9,8 @@ import { calculateTotalTime } from './utils/timeUtils';
 
 const DEFAULT_CONFIG: TimerConfig = {
   prepTime: 10,
-  workTime: 5, 
-  restTime: 55, 
+  workTime: 5,
+  restTime: 55,
   rounds: 8,
   coolDownTime: 60,
 };
@@ -21,10 +22,23 @@ const DEFAULT_EXERCISES = [
   'Straight'
 ];
 
+// Page transition variants
+const pageVariants = {
+  initial: { opacity: 0 },
+  animate: { opacity: 1 },
+  exit: { opacity: 0 },
+};
+
+const pageTransition = {
+  type: 'tween',
+  duration: 0.2,
+  ease: 'easeInOut',
+};
+
 function App() {
   const [view, setView] = useState<View>('SETUP');
   const [config, setConfig] = useState<TimerConfig>(DEFAULT_CONFIG);
-  
+
   // Load exercises from localStorage
   const [exercises, setExercises] = useState<string[]>(() => {
     const saved = localStorage.getItem('customExercises');
@@ -79,41 +93,87 @@ function App() {
     setView('SETUP');
   };
 
+  // Check for reduced motion preference
+  const prefersReducedMotion = typeof window !== 'undefined'
+    && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
   return (
-    <div className="h-screen w-full bg-gray-900 text-white overflow-hidden flex flex-col font-sans">
-      {view === 'SETUP' && (
-        <TimerSetup 
-          config={config} 
-          setConfig={setConfig} 
-          onStart={handleStart}
-          onOpenSettings={handleOpenSettings}
-          onOpenStats={handleOpenStats}
-        />
-      )}
+    <div className="h-screen w-full bg-surface text-on-surface overflow-hidden flex flex-col font-sans">
+      <AnimatePresence mode="wait">
+        {view === 'SETUP' && (
+          <motion.div
+            key="setup"
+            variants={prefersReducedMotion ? {} : pageVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={pageTransition}
+            className="h-full"
+          >
+            <TimerSetup
+              config={config}
+              setConfig={setConfig}
+              onStart={handleStart}
+              onOpenSettings={handleOpenSettings}
+              onOpenStats={handleOpenStats}
+            />
+          </motion.div>
+        )}
 
-      {view === 'SETTINGS' && (
-        <Settings
-          exercises={exercises}
-          setExercises={setExercises}
-          onClose={handleCloseSubView}
-        />
-      )}
+        {view === 'SETTINGS' && (
+          <motion.div
+            key="settings"
+            variants={prefersReducedMotion ? {} : pageVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={pageTransition}
+            className="h-full"
+          >
+            <Settings
+              exercises={exercises}
+              setExercises={setExercises}
+              onClose={handleCloseSubView}
+            />
+          </motion.div>
+        )}
 
-      {view === 'STATS' && (
-        <Statistics
-          history={history}
-          onClose={handleCloseSubView}
-        />
-      )}
+        {view === 'STATS' && (
+          <motion.div
+            key="stats"
+            variants={prefersReducedMotion ? {} : pageVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={pageTransition}
+            className="h-full"
+          >
+            <Statistics
+              history={history}
+              onClose={handleCloseSubView}
+            />
+          </motion.div>
+        )}
 
-      {view === 'TIMER' && (
-        <ActiveTimer
-          config={config}
-          exercises={exercises}
-          onFinish={handleFinish}
-          onExit={handleExit}
-        />
-      )}
+        {view === 'TIMER' && (
+          <motion.div
+            key="timer"
+            variants={prefersReducedMotion ? {} : pageVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={pageTransition}
+            className="h-full"
+          >
+            <ActiveTimer
+              config={config}
+              exercises={exercises}
+              onFinish={handleFinish}
+              onExit={handleExit}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

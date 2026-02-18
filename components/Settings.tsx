@@ -1,11 +1,50 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Plus, X, Trash2 } from 'lucide-react';
+import { Reorder, useDragControls } from 'framer-motion';
+import { ArrowLeft, Plus, Trash2, GripVertical, RotateCcw } from 'lucide-react';
 
 interface SettingsProps {
   exercises: string[];
   setExercises: React.Dispatch<React.SetStateAction<string[]>>;
   onClose: () => void;
 }
+
+interface ExerciseItemProps {
+  exercise: string;
+  onRemove: () => void;
+}
+
+const ExerciseItem: React.FC<ExerciseItemProps> = ({ exercise, onRemove }) => {
+  const dragControls = useDragControls();
+
+  return (
+    <Reorder.Item
+      value={exercise}
+      dragListener={false}
+      dragControls={dragControls}
+      className="touch-manipulation"
+    >
+      <div className="flex items-center gap-3 bg-surface-container rounded-lg p-3">
+        <button
+          className="p-1 text-on-surface-variant cursor-grab active:cursor-grabbing touch-manipulation"
+          onPointerDown={(e) => dragControls.start(e)}
+        >
+          <GripVertical size={18} />
+        </button>
+
+        <span className="flex-1 text-on-surface">
+          {exercise}
+        </span>
+
+        <button
+          onClick={onRemove}
+          className="p-1.5 text-on-surface-variant hover:text-phase-rest-DEFAULT transition-colors"
+        >
+          <Trash2 size={18} />
+        </button>
+      </div>
+    </Reorder.Item>
+  );
+};
 
 export const Settings: React.FC<SettingsProps> = ({
   exercises,
@@ -31,22 +70,32 @@ export const Settings: React.FC<SettingsProps> = ({
     }
   };
 
+  const handleReorder = (newOrder: string[]) => {
+    setExercises(newOrder);
+  };
+
+  const handleReset = () => {
+    setExercises(['Right', 'Left', 'Come back', 'Straight']);
+  };
+
   return (
-    <div className="flex flex-col h-full max-w-md mx-auto bg-gray-900 p-4">
+    <div className="flex flex-col h-full max-w-md mx-auto p-4">
+      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <button
           onClick={onClose}
-          className="text-white p-2 hover:bg-gray-800 rounded-full transition-colors"
+          className="p-2 text-on-surface hover:bg-surface-container-high rounded-lg transition-colors"
         >
-          <ArrowLeft size={28} />
+          <ArrowLeft size={22} />
         </button>
-        <h2 className="text-xl font-bold text-white uppercase tracking-wider">Custom Exercises</h2>
-        <div className="w-10" /> {/* Spacer */}
+        <h2 className="text-lg font-semibold text-on-surface">Exercises</h2>
+        <div className="w-10" />
       </div>
 
-      <div className="bg-gray-800 p-4 rounded-lg mb-6 shadow-md border border-gray-700">
-        <p className="text-gray-400 text-sm mb-2">
-          Add exercises to be randomly announced during the "Work" interval.
+      {/* Add Exercise */}
+      <div className="mb-4">
+        <p className="text-xs text-on-surface-variant mb-2">
+          Called out during work intervals
         </p>
         <div className="flex gap-2">
           <input
@@ -54,51 +103,51 @@ export const Settings: React.FC<SettingsProps> = ({
             value={newExercise}
             onChange={(e) => setNewExercise(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="E.g., Burpees"
-            className="flex-1 bg-gray-700 text-white px-4 py-3 rounded-lg border border-gray-600 focus:outline-none focus:border-sky-500"
+            placeholder="e.g. Burpees"
+            className="flex-1 bg-surface-container text-on-surface px-3 py-2.5 rounded-lg border border-outline-variant focus:outline-none focus:border-primary transition-colors text-sm placeholder:text-on-surface-variant/50"
           />
           <button
             onClick={handleAdd}
-            className="bg-sky-600 text-white p-3 rounded-lg font-bold hover:bg-sky-500 transition-colors"
+            disabled={!newExercise.trim()}
+            className="bg-primary text-surface px-3 rounded-lg disabled:opacity-40"
           >
-            <Plus size={24} />
+            <Plus size={20} />
           </button>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto pr-2">
+      {/* Exercise List */}
+      <div className="flex-1 overflow-y-auto">
         {exercises.length === 0 ? (
-          <div className="text-center text-gray-500 py-8">
-            No exercises added. Please add some!
+          <div className="flex flex-col items-center justify-center py-12 text-center text-on-surface-variant">
+            <p className="text-sm">No exercises yet</p>
           </div>
         ) : (
-          <div className="space-y-2">
+          <Reorder.Group
+            axis="y"
+            values={exercises}
+            onReorder={handleReorder}
+            className="space-y-2"
+          >
             {exercises.map((exercise, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between bg-white rounded-lg p-4 shadow-sm"
-              >
-                <span className="text-gray-900 font-bold text-lg">{exercise}</span>
-                <button
-                  onClick={() => handleRemove(index)}
-                  className="text-red-500 hover:text-red-700 p-2"
-                >
-                  <Trash2 size={20} />
-                </button>
-              </div>
+              <ExerciseItem
+                key={exercise + index}
+                exercise={exercise}
+                onRemove={() => handleRemove(index)}
+              />
             ))}
-          </div>
+          </Reorder.Group>
         )}
       </div>
-      
-      <div className="mt-4 text-center">
+
+      {/* Reset Button */}
+      <div className="mt-4 pt-4 border-t border-outline-variant">
         <button
-            onClick={() => {
-                setExercises(['Right', 'Left', 'Come back', 'Straight']);
-            }}
-            className="text-sky-400 text-sm underline hover:text-sky-300"
+          onClick={handleReset}
+          className="w-full flex items-center justify-center gap-2 py-2.5 text-sm text-on-surface-variant hover:text-primary transition-colors"
         >
-            Reset to Defaults
+          <RotateCcw size={16} />
+          Reset to defaults
         </button>
       </div>
     </div>
