@@ -3,8 +3,10 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
+const appBase = '/Interval-Trainer-Pro/';
+
 export default defineConfig({
-  base: '/Interval-Trainer-Pro/',
+  base: appBase,
   server: {
     port: 3000,
     host: '0.0.0.0',
@@ -13,7 +15,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
+      includeAssets: ['favicon.png', 'apple-touch-icon.png'],
       manifest: {
         name: 'Interval Trainer Pro',
         short_name: 'Interval Timer',
@@ -22,8 +24,8 @@ export default defineConfig({
         background_color: '#1a1a1a',
         display: 'standalone',
         orientation: 'portrait',
-        scope: '/',
-        start_url: '/',
+        scope: appBase,
+        start_url: appBase,
         icons: [
           {
             src: 'pwa-192x192.png',

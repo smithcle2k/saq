@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Pause, Play, X } from 'lucide-react';
 import { TimerConfig, TimerPhase } from '../types';
@@ -108,60 +108,6 @@ const phaseConfig = {
   },
 };
 
-// Progress Ring Component
-interface ProgressRingProps {
-  progress: number; // 0 to 1
-  color: string;
-  size?: number;
-  strokeWidth?: number;
-}
-
-const ProgressRing: React.FC<ProgressRingProps> = ({
-  progress,
-  color,
-  size = 280,
-  strokeWidth = 8
-}) => {
-  const radius = (size - strokeWidth) / 2;
-  const circumference = radius * 2 * Math.PI;
-  const strokeDashoffset = circumference - progress * circumference;
-
-  return (
-    <svg
-      width={size}
-      height={size}
-      className="absolute transform -rotate-90"
-      style={{ filter: `drop-shadow(0 0 10px ${color}40)` }}
-    >
-      {/* Background ring */}
-      <circle
-        cx={size / 2}
-        cy={size / 2}
-        r={radius}
-        stroke="rgba(255, 255, 255, 0.1)"
-        strokeWidth={strokeWidth}
-        fill="none"
-      />
-      {/* Progress ring */}
-      <motion.circle
-        cx={size / 2}
-        cy={size / 2}
-        r={radius}
-        stroke={color}
-        strokeWidth={strokeWidth}
-        fill="none"
-        strokeLinecap="round"
-        initial={{ strokeDashoffset: circumference }}
-        animate={{ strokeDashoffset }}
-        transition={{ duration: 0.5, ease: 'easeOut' }}
-        style={{
-          strokeDasharray: circumference,
-        }}
-      />
-    </svg>
-  );
-};
-
 // Round Progress Dots Component
 interface RoundDotsProps {
   currentRound: number;
@@ -211,87 +157,48 @@ export const ActiveTimer: React.FC<ActiveTimerProps> = ({
   const [currentRound, setCurrentRound] = useState(1);
   const [isPaused, setIsPaused] = useState(false);
   const [currentExercise, setCurrentExercise] = useState<string>('');
+  const hasAnnouncedPrepRef = useRef(false);
 
-  // Refs for managing timeouts and pause state in callbacks
-  const exerciseTimeoutRef = useRef<number | null>(null);
-  const isPausedRef = useRef(isPaused);
-
-  // Sync ref with state
   useEffect(() => {
-    isPausedRef.current = isPaused;
-  }, [isPaused]);
-
-  // Clean up timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (exerciseTimeoutRef.current) {
-        clearTimeout(exerciseTimeoutRef.current);
-      }
-    };
+    if (hasAnnouncedPrepRef.current) return;
+    hasAnnouncedPrepRef.current = true;
+    speak('Get ready', { interrupt: true });
   }, []);
 
   const getRandomExercise = useCallback(() => {
-    if (exercises.length === 0) return "Go!";
+    if (exercises.length === 0) return 'Move';
     const randomIndex = Math.floor(Math.random() * exercises.length);
     return exercises[randomIndex];
   }, [exercises]);
-
-  // Calculate phase duration for progress
-  const getPhaseDuration = useCallback(() => {
-    switch (phase) {
-      case TimerPhase.PREP: return config.prepTime;
-      case TimerPhase.WORK: return config.workTime;
-      case TimerPhase.REST: return config.restTime;
-      case TimerPhase.COOL_DOWN: return config.coolDownTime;
-      default: return 1;
-    }
-  }, [phase, config]);
-
-  const progress = useMemo(() => {
-    const duration = getPhaseDuration();
-    return duration > 0 ? (duration - timeRemaining) / duration : 1;
-  }, [timeRemaining, getPhaseDuration]);
 
   const startWork = () => {
     setPhase(TimerPhase.WORK);
     setTimeRemaining(config.workTime);
     const exercise = getRandomExercise();
     setCurrentExercise(exercise);
-
-    // Sequence: Say "Go", wait 1s, say Exercise
-    speak('Go');
-    if (exerciseTimeoutRef.current) clearTimeout(exerciseTimeoutRef.current);
-    exerciseTimeoutRef.current = window.setTimeout(() => {
-      // Only speak the exercise if we are still in the work phase and not paused
-      if (!isPausedRef.current) {
-        speak(exercise);
-      }
-    }, 1000);
+    speak(`Go. ${exercise}`, { interrupt: true });
   };
 
   const startRest = () => {
-    if (exerciseTimeoutRef.current) clearTimeout(exerciseTimeoutRef.current);
     setPhase(TimerPhase.REST);
     setTimeRemaining(config.restTime);
     setCurrentExercise('');
-    speak('Rest');
+    speak('Rest', { interrupt: true });
   };
 
   const startCoolDown = () => {
-    if (exerciseTimeoutRef.current) clearTimeout(exerciseTimeoutRef.current);
     if (config.coolDownTime > 0) {
       setPhase(TimerPhase.COOL_DOWN);
       setTimeRemaining(config.coolDownTime);
-      speak('Cool Down');
+      speak('Cool down', { interrupt: true });
     } else {
       finishWorkout();
     }
   };
 
   const finishWorkout = () => {
-    if (exerciseTimeoutRef.current) clearTimeout(exerciseTimeoutRef.current);
     setPhase(TimerPhase.FINISHED);
-    speak('Workout Complete');
+    speak('Workout complete', { interrupt: true });
     setTimeout(onFinish, 3000);
   };
 
@@ -434,15 +341,8 @@ export const ActiveTimer: React.FC<ActiveTimerProps> = ({
           </motion.div>
         ) : (
           <>
-            {/* Timer with Progress Ring */}
+            {/* Timer */}
             <div className="relative flex items-center justify-center">
-              <ProgressRing
-                progress={progress}
-                color={currentPhaseConfig.ringColor}
-                size={280}
-                strokeWidth={6}
-              />
-
               <motion.div
                 className={`text-timer-huge font-bold font-mono tracking-tighter drop-shadow-lg ${
                   isCountdown ? 'text-white' : ''
