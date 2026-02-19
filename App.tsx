@@ -5,6 +5,7 @@ import { TimerSetup } from './components/TimerSetup';
 import { ActiveTimer } from './components/ActiveTimer';
 import { Settings } from './components/Settings';
 import { Statistics } from './components/Statistics';
+import { Tutorial } from './components/Tutorial';
 import { calculateTotalTime } from './utils/timeUtils';
 import { initializeSpeech } from './utils/tts';
 
@@ -39,6 +40,14 @@ const pageTransition = {
 function App() {
   const [view, setView] = useState<View>('SETUP');
   const [config, setConfig] = useState<TimerConfig>(DEFAULT_CONFIG);
+  const [showTutorial, setShowTutorial] = useState<boolean>(
+    () => !localStorage.getItem('tutorialSeen')
+  );
+
+  const handleDismissTutorial = () => {
+    localStorage.setItem('tutorialSeen', '1');
+    setShowTutorial(false);
+  };
 
   // Load exercises from localStorage
   const [exercises, setExercises] = useState<string[]>(() => {
@@ -191,6 +200,13 @@ function App() {
               onExit={handleExit}
             />
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* First-time tutorial overlay */}
+      <AnimatePresence>
+        {showTutorial && (
+          <Tutorial onDismiss={handleDismissTutorial} />
         )}
       </AnimatePresence>
     </div>
