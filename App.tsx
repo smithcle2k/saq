@@ -6,6 +6,7 @@ import { ActiveTimer } from './components/ActiveTimer';
 import { Settings } from './components/Settings';
 import { Statistics } from './components/Statistics';
 import { calculateTotalTime } from './utils/timeUtils';
+import { initializeSpeech } from './utils/tts';
 
 const DEFAULT_CONFIG: TimerConfig = {
   prepTime: 10,
@@ -63,6 +64,7 @@ function App() {
   };
 
   const handleStart = () => {
+    initializeSpeech();
     setView('TIMER');
   };
 
