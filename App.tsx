@@ -57,6 +57,23 @@ function App() {
     localStorage.setItem('customExercises', JSON.stringify(exercises));
   }, [exercises]);
 
+  // Unlock speech synthesis on the first user interaction.
+  useEffect(() => {
+    const unlockSpeech = () => {
+      initializeSpeech();
+      window.removeEventListener('pointerdown', unlockSpeech);
+      window.removeEventListener('touchstart', unlockSpeech);
+    };
+
+    window.addEventListener('pointerdown', unlockSpeech, { passive: true });
+    window.addEventListener('touchstart', unlockSpeech, { passive: true });
+
+    return () => {
+      window.removeEventListener('pointerdown', unlockSpeech);
+      window.removeEventListener('touchstart', unlockSpeech);
+    };
+  }, []);
+
   const saveHistory = (newItem: WorkoutHistoryItem) => {
     const updatedHistory = [newItem, ...history];
     setHistory(updatedHistory);
