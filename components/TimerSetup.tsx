@@ -85,9 +85,10 @@ export const TimerSetup: React.FC<TimerSetupProps> = ({
           />
 
           {/* Total Duration */}
-          <div className="mt-2 bg-surface-container rounded-xl p-4 flex justify-between items-center">
-            <span className="text-sm text-on-surface-variant">Total</span>
-            <span className="text-lg font-mono font-semibold text-primary">
+          <div className="mt-2 glass-panel rounded-2xl p-4 flex justify-between items-center relative overflow-hidden">
+            <div className="absolute inset-0 bg-primary/5 blur-xl"></div>
+            <span className="text-sm text-on-surface-variant relative z-10 font-medium">Total</span>
+            <span className="text-xl font-mono font-bold text-primary relative z-10 text-glow">
               {formatTime(totalDuration)}
             </span>
           </div>
@@ -95,18 +96,19 @@ export const TimerSetup: React.FC<TimerSetupProps> = ({
 
         {/* Desktop Sidebar */}
         <div className="hidden lg:flex lg:flex-col lg:w-56 lg:justify-center">
-          <div className="bg-surface-container rounded-xl p-4">
-            <h3 className="text-xs text-on-surface-variant uppercase mb-3">
-              Summary
+          <div className="glass-panel rounded-2xl p-5 relative overflow-hidden">
+            <div className="absolute -top-10 -right-10 w-24 h-24 bg-primary/10 rounded-full blur-2xl"></div>
+            <h3 className="text-xs text-primary font-bold tracking-wider uppercase mb-4 relative z-10">
+              Session Summary
             </h3>
-            <div className="space-y-2 text-sm text-on-surface">
-              <div className="flex justify-between">
-                <span className="text-on-surface-variant">Rounds</span>
-                <span className="font-mono">{config.rounds}</span>
+            <div className="space-y-3 text-sm text-on-surface relative z-10">
+              <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                <span className="text-on-surface-variant font-medium">Rounds</span>
+                <span className="font-mono font-bold">{config.rounds}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-on-surface-variant">Work/Rest</span>
-                <span className="font-mono">{config.workTime}s / {config.restTime}s</span>
+              <div className="flex justify-between items-center">
+                <span className="text-on-surface-variant font-medium">Work / Rest</span>
+                <span className="font-mono font-bold">{config.workTime}s / {config.restTime}s</span>
               </div>
             </div>
           </div>
@@ -114,10 +116,10 @@ export const TimerSetup: React.FC<TimerSetupProps> = ({
       </div>
 
       {/* Bottom Actions */}
-      <div className="mt-6 flex gap-3 pb-safe">
+      <div className="mt-8 flex gap-3 pb-safe">
         <button
           onClick={onOpenSettings}
-          className="flex-1 h-12 bg-surface-container-high rounded-xl flex items-center justify-center text-on-surface-variant hover:text-on-surface active:bg-surface-container-highest transition-colors"
+          className="flex-1 h-14 glass-panel-interactive rounded-2xl flex items-center justify-center text-on-surface-variant hover:text-primary transition-all"
           aria-label="Settings"
         >
           <Settings size={22} />
@@ -125,7 +127,7 @@ export const TimerSetup: React.FC<TimerSetupProps> = ({
 
         <button
           onClick={onOpenStats}
-          className="flex-1 h-12 bg-surface-container-high rounded-xl flex items-center justify-center text-on-surface-variant hover:text-on-surface active:bg-surface-container-highest transition-colors"
+          className="flex-1 h-14 glass-panel-interactive rounded-2xl flex items-center justify-center text-on-surface-variant hover:text-primary transition-all"
           aria-label="Statistics"
         >
           <BarChart2 size={22} />
@@ -133,10 +135,10 @@ export const TimerSetup: React.FC<TimerSetupProps> = ({
 
         <button
           onClick={onStart}
-          className="flex-[2] h-12 bg-primary rounded-xl flex items-center justify-center gap-2 text-surface font-semibold active:opacity-90 transition-opacity"
+          className="flex-[2] h-14 bg-primary/20 border border-primary/40 rounded-2xl flex items-center justify-center gap-2 text-primary hover:bg-primary/30 hover:border-primary/60 hover:shadow-[0_0_20px_rgba(0,240,255,0.4)] active:scale-95 transition-all font-bold tracking-wide"
         >
           <Play size={20} fill="currentColor" />
-          <span>Start</span>
+          <span className="text-lg">START</span>
         </button>
       </div>
     </div>

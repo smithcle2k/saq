@@ -38,47 +38,49 @@ export const Tutorial: React.FC<TutorialProps> = ({ onDismiss }) => (
         exit={{ opacity: 0 }}
     >
         {/* Backdrop */}
-        <div className="absolute inset-0 bg-black/70 backdrop-blur-md" onClick={onDismiss} />
+        <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={onDismiss} />
 
         {/* Card */}
         <motion.div
-            className="relative w-full max-w-sm bg-surface-container-high rounded-3xl shadow-2xl overflow-hidden"
+            className="relative w-full max-w-md glass-panel rounded-[2rem] shadow-2xl overflow-hidden border border-white/10"
             initial={{ y: 50, opacity: 0, scale: 0.97 }}
             animate={{ y: 0, opacity: 1, scale: 1 }}
             exit={{ y: 50, opacity: 0, scale: 0.97 }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
         >
+            <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
+
             {/* Header */}
-            <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-outline-variant">
-                <h2 className="text-base font-semibold text-on-surface">How it works</h2>
+            <div className="flex items-center justify-between px-8 pt-8 pb-4 border-b border-white/5 relative z-10">
+                <h2 className="text-xl font-bold tracking-wide text-on-surface">HOW IT WORKS</h2>
                 <button
                     onClick={onDismiss}
-                    className="p-1.5 rounded-full text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors"
+                    className="p-2.5 rounded-full text-on-surface-variant hover:text-primary bg-white/5 hover:bg-white/10 transition-colors"
                     aria-label="Close"
                 >
-                    <X size={18} />
+                    <X size={20} />
                 </button>
             </div>
 
             {/* Sections */}
-            <div className="px-6 py-5 space-y-5 overflow-y-auto max-h-[70vh]">
+            <div className="px-8 py-6 space-y-6 overflow-y-auto max-h-[60vh] relative z-10">
                 {sections.map(({ heading, body }) => (
                     <div key={heading}>
-                        <p className="text-xs font-semibold text-primary uppercase tracking-wider mb-1">
+                        <p className="text-xs font-bold text-primary uppercase tracking-widest mb-1.5 drop-shadow-[0_0_8px_rgba(0,240,255,0.4)]">
                             {heading}
                         </p>
-                        <p className="text-sm text-on-surface-variant leading-relaxed">{body}</p>
+                        <p className="text-base text-on-surface-variant leading-relaxed font-medium">{body}</p>
                     </div>
                 ))}
             </div>
 
             {/* Footer */}
-            <div className="px-6 pb-6 pt-3 border-t border-outline-variant">
+            <div className="px-8 pb-8 pt-6 border-t border-white/5 relative z-10">
                 <button
                     onClick={onDismiss}
-                    className="w-full h-12 bg-primary text-surface font-semibold rounded-xl active:opacity-90 transition-opacity"
+                    className="w-full h-14 bg-primary/20 border border-primary/40 text-primary font-bold tracking-wider text-lg rounded-2xl hover:bg-primary/30 hover:shadow-[0_0_20px_rgba(0,240,255,0.4)] active:scale-95 transition-all"
                 >
-                    Got it
+                    GET STARTED
                 </button>
             </div>
         </motion.div>

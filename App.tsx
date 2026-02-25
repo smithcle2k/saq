@@ -126,7 +126,7 @@ function App() {
     && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
   return (
-    <div className="h-screen w-full bg-surface text-on-surface overflow-hidden flex flex-col font-sans">
+    <div className="h-screen w-full bg-transparent text-on-surface overflow-hidden flex flex-col font-sans relative">
       <AnimatePresence mode="wait">
         {view === 'SETUP' && (
           <motion.div

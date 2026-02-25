@@ -86,13 +86,12 @@ const RoundDots: React.FC<RoundDotsProps> = ({ currentRound, totalRounds }) => {
       {Array.from({ length: showDots }, (_, i) => (
         <motion.div
           key={i}
-          className={`w-3 h-3 rounded-full transition-all duration-300 ${
-            i < currentRound
-              ? 'bg-white'
-              : i === currentRound - 1
+          className={`w-3 h-3 rounded-full transition-all duration-300 ${i < currentRound
+            ? 'bg-white'
+            : i === currentRound - 1
               ? 'bg-white shadow-lg'
               : 'bg-white/30'
-          }`}
+            }`}
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ delay: i * 0.05, type: 'spring', stiffness: 400 }}
@@ -182,25 +181,25 @@ export const ActiveTimer: React.FC<ActiveTimerProps> = ({
             transition={{ duration: 0.2 }}
           >
             {/* Frosted glass background */}
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-xl" />
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-3xl" />
 
             <motion.div
               className="relative z-10 flex flex-col items-center"
-              initial={{ scale: 0.9, opacity: 0 }}
+              initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
+              exit={{ scale: 0.95, opacity: 0 }}
               transition={{ type: 'spring', stiffness: 300, damping: 25 }}
             >
-              <div className="text-white/60 text-lg font-medium uppercase tracking-wide mb-8">
+              <div className="text-white/60 text-lg font-bold uppercase tracking-[0.2em] mb-8">
                 Paused
               </div>
               <button
                 onClick={togglePause}
-                className="flex items-center gap-3 bg-primary text-surface px-8 py-4 rounded-full font-semibold text-lg active:opacity-90"
+                className="flex items-center gap-3 bg-white text-black px-10 py-5 rounded-full font-bold text-lg hover:scale-105 active:scale-95 transition-all shadow-[0_0_40px_rgba(255,255,255,0.3)]"
                 aria-label="Resume Workout"
               >
                 <Play size={28} fill="currentColor" />
-                Resume
+                RESUME
               </button>
             </motion.div>
           </motion.div>
@@ -241,9 +240,8 @@ export const ActiveTimer: React.FC<ActiveTimerProps> = ({
             {/* Timer */}
             <div className="relative flex items-center justify-center">
               <motion.div
-                className={`text-timer-huge font-bold font-mono tracking-tighter drop-shadow-lg ${
-                  isCountdown ? 'text-white' : ''
-                }`}
+                className={`text-timer-huge font-bold font-mono tracking-tighter drop-shadow-[0_0_30px_rgba(255,255,255,0.4)] ${isCountdown ? 'text-white' : ''
+                  }`}
                 animate={isCountdown ? { scale: [1, 1.1, 1] } : {}}
                 transition={{ duration: 0.5 }}
                 key={isCountdown ? timeRemaining : 'normal'}

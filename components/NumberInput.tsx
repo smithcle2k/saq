@@ -102,19 +102,20 @@ export const NumberInput: React.FC<NumberInputProps> = ({
   }, [stopLongPress]);
 
   return (
-    <div className="bg-surface-container rounded-xl overflow-hidden border border-outline-variant">
+    <div className="glass-panel overflow-hidden rounded-2xl group transition-all hover:border-primary/20">
       <div className="flex items-stretch">
         {/* Label */}
-        <div className="bg-surface-container-high px-4 py-3 flex items-center min-w-[90px] border-r border-outline-variant">
-          <span className="text-primary text-sm font-medium">
+        <div className="bg-black/20 px-4 py-4 flex items-center min-w-[90px] border-r border-white/5 transition-colors group-hover:bg-black/30">
+          <span className="text-primary text-sm font-semibold tracking-wider uppercase">
             {label}
           </span>
         </div>
 
         {/* Value */}
-        <div className="flex-1 flex items-center justify-center px-4 py-3">
+        <div className="flex-1 flex items-center justify-center px-4 py-4 relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
           {readOnly ? (
-            <span className="text-on-surface font-mono text-lg font-semibold">
+            <span className="text-on-surface font-mono text-xl font-bold tracking-tight relative z-10">
               {localValue}
             </span>
           ) : (
@@ -126,7 +127,7 @@ export const NumberInput: React.FC<NumberInputProps> = ({
               onBlur={handleBlur}
               onFocus={handleFocus}
               onKeyDown={handleKeyDown}
-              className="w-full text-center text-on-surface font-mono text-lg font-semibold bg-transparent outline-none"
+              className="w-full text-center text-on-surface font-mono text-xl font-bold tracking-tight bg-transparent outline-none relative z-10 transition-colors focus:text-primary"
               aria-label={`Enter ${label}`}
             />
           )}
@@ -134,7 +135,7 @@ export const NumberInput: React.FC<NumberInputProps> = ({
 
         {/* Buttons */}
         {!readOnly && (
-          <div className="flex items-stretch border-l border-outline-variant">
+          <div className="flex items-stretch border-l border-white/5">
             <button
               onClick={handleDecrement}
               onMouseDown={() => startLongPress(handleDecrement)}
@@ -142,13 +143,13 @@ export const NumberInput: React.FC<NumberInputProps> = ({
               onMouseLeave={stopLongPress}
               onTouchStart={() => startLongPress(handleDecrement)}
               onTouchEnd={stopLongPress}
-              className="w-12 flex items-center justify-center bg-surface-container-high text-on-surface-variant hover:text-on-surface active:bg-surface-container-highest transition-colors touch-manipulation"
+              className="w-14 flex items-center justify-center bg-black/10 text-on-surface-variant hover:bg-black/30 hover:text-primary active:bg-black/50 transition-all touch-manipulation"
               aria-label={`Decrease ${label}`}
               tabIndex={-1}
             >
-              <Minus size={18} />
+              <Minus size={20} />
             </button>
-            <div className="w-px bg-outline-variant" />
+            <div className="w-px bg-white/5" />
             <button
               onClick={handleIncrement}
               onMouseDown={() => startLongPress(handleIncrement)}
@@ -156,17 +157,17 @@ export const NumberInput: React.FC<NumberInputProps> = ({
               onMouseLeave={stopLongPress}
               onTouchStart={() => startLongPress(handleIncrement)}
               onTouchEnd={stopLongPress}
-              className="w-12 flex items-center justify-center bg-surface-container-high text-on-surface-variant hover:text-on-surface active:bg-surface-container-highest transition-colors touch-manipulation"
+              className="w-14 flex items-center justify-center bg-black/10 text-on-surface-variant hover:bg-black/30 hover:text-primary active:bg-black/50 transition-all touch-manipulation"
               aria-label={`Increase ${label}`}
               tabIndex={-1}
             >
-              <Plus size={18} />
+              <Plus size={20} />
             </button>
           </div>
         )}
 
         {readOnly && (
-          <div className="w-[97px] bg-surface-container-high border-l border-outline-variant" />
+          <div className="w-[113px] bg-black/10 border-l border-white/5" />
         )}
       </div>
     </div>
