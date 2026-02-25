@@ -1,50 +1,11 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Pause, Play, X } from 'lucide-react';
 import { TimerConfig, TimerPhase } from '../types';
 import { formatTime } from '../utils/timeUtils';
 import { speak } from '../utils/tts';
-
-// Screen Wake Lock hook to prevent display from sleeping
-const useWakeLock = () => {
-  const wakeLockRef = useRef<WakeLockSentinel | null>(null);
-
-  const requestWakeLock = useCallback(async () => {
-    if ('wakeLock' in navigator) {
-      try {
-        wakeLockRef.current = await navigator.wakeLock.request('screen');
-      } catch (err) {
-        // Wake lock request failed (e.g., low battery, tab not visible)
-        console.log('Wake lock request failed:', err);
-      }
-    }
-  }, []);
-
-  const releaseWakeLock = useCallback(() => {
-    if (wakeLockRef.current) {
-      wakeLockRef.current.release();
-      wakeLockRef.current = null;
-    }
-  }, []);
-
-  useEffect(() => {
-    requestWakeLock();
-
-    // Re-acquire wake lock when page becomes visible again
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        requestWakeLock();
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      releaseWakeLock();
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [requestWakeLock, releaseWakeLock]);
-};
+import { useActiveTimerEngine } from '../hooks/useActiveTimerEngine';
+import { useWakeLock } from '../hooks/useWakeLock';
 
 interface ActiveTimerProps {
   config: TimerConfig;
@@ -108,6 +69,7 @@ const phaseConfig = {
   },
 };
 
+
 // Round Progress Dots Component
 interface RoundDotsProps {
   currentRound: number;
@@ -152,87 +114,26 @@ export const ActiveTimer: React.FC<ActiveTimerProps> = ({
   // Keep screen awake while timer is active
   useWakeLock();
 
-  const [phase, setPhase] = useState<TimerPhase>(TimerPhase.PREP);
-  const [timeRemaining, setTimeRemaining] = useState(config.prepTime);
-  const [currentRound, setCurrentRound] = useState(1);
-  const [isPaused, setIsPaused] = useState(false);
-  const [currentExercise, setCurrentExercise] = useState<string>('');
   const hasAnnouncedPrepRef = useRef(false);
+  const {
+    phase,
+    timeRemaining,
+    currentRound,
+    currentExercise,
+    isPaused,
+    togglePause,
+  } = useActiveTimerEngine({
+    config,
+    exercises,
+    onFinish,
+    onAnnounce: (message) => speak(message, { interrupt: true }),
+  });
 
   useEffect(() => {
     if (hasAnnouncedPrepRef.current) return;
     hasAnnouncedPrepRef.current = true;
     speak('Get ready', { interrupt: true });
   }, []);
-
-  const getRandomExercise = useCallback(() => {
-    if (exercises.length === 0) return 'Move';
-    const randomIndex = Math.floor(Math.random() * exercises.length);
-    return exercises[randomIndex];
-  }, [exercises]);
-
-  const startWork = () => {
-    setPhase(TimerPhase.WORK);
-    setTimeRemaining(config.workTime);
-    const exercise = getRandomExercise();
-    setCurrentExercise(exercise);
-    speak(`Go. ${exercise}`, { interrupt: true });
-  };
-
-  const startRest = () => {
-    setPhase(TimerPhase.REST);
-    setTimeRemaining(config.restTime);
-    setCurrentExercise('');
-    speak('Rest', { interrupt: true });
-  };
-
-  const startCoolDown = () => {
-    if (config.coolDownTime > 0) {
-      setPhase(TimerPhase.COOL_DOWN);
-      setTimeRemaining(config.coolDownTime);
-      speak('Cool down', { interrupt: true });
-    } else {
-      finishWorkout();
-    }
-  };
-
-  const finishWorkout = () => {
-    setPhase(TimerPhase.FINISHED);
-    speak('Workout complete', { interrupt: true });
-    setTimeout(onFinish, 3000);
-  };
-
-  const triggerPhaseTransition = () => {
-    if (phase === TimerPhase.PREP) {
-      startWork();
-    } else if (phase === TimerPhase.WORK) {
-      startRest();
-    } else if (phase === TimerPhase.REST) {
-      if (currentRound < config.rounds) {
-        setCurrentRound(r => r + 1);
-        startWork();
-      } else {
-        startCoolDown();
-      }
-    } else if (phase === TimerPhase.COOL_DOWN) {
-      finishWorkout();
-    }
-  };
-
-  const tick = useCallback(() => {
-    if (isPaused) return;
-
-    if (timeRemaining > 0) {
-      setTimeRemaining((prev) => prev - 1);
-    } else {
-      triggerPhaseTransition();
-    }
-  }, [isPaused, timeRemaining, phase, currentRound, config, exercises]);
-
-  useEffect(() => {
-    const timerId = setInterval(tick, 1000);
-    return () => clearInterval(timerId);
-  }, [tick]);
 
   // Synchronized countdown beeps
   useEffect(() => {
@@ -246,10 +147,6 @@ export const ActiveTimer: React.FC<ActiveTimerProps> = ({
       }
     }
   }, [timeRemaining, phase, isPaused]);
-
-  const togglePause = () => {
-    setIsPaused(!isPaused);
-  };
 
   const currentPhaseConfig = phaseConfig[phase];
   const isCountdown = timeRemaining <= 3 && timeRemaining > 0;
