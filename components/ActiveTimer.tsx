@@ -118,7 +118,6 @@ export const ActiveTimer: React.FC<ActiveTimerProps> = ({
     phase,
     timeRemaining,
     currentRound,
-    currentExercise,
     isPaused,
     togglePause,
   } = useActiveTimerEngine({
@@ -252,20 +251,6 @@ export const ActiveTimer: React.FC<ActiveTimerProps> = ({
 
             {/* Exercise Display for Work Phase */}
             <AnimatePresence mode="wait">
-              {phase === TimerPhase.WORK && (
-                <motion.div
-                  className="mt-8"
-                  initial={{ opacity: 0, y: 20, scale: 0.9 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -20, scale: 0.9 }}
-                  transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-                >
-                  <span className="text-3xl font-bold uppercase bg-white text-surface px-5 py-2.5 rounded-xl inline-block">
-                    {currentExercise}
-                  </span>
-                </motion.div>
-              )}
-
               {phase === TimerPhase.PREP && (
                 <div className="mt-6 text-lg font-medium opacity-70">
                   Get ready
@@ -293,7 +278,7 @@ export const ActiveTimer: React.FC<ActiveTimerProps> = ({
 
       {/* Controls */}
       {phase !== TimerPhase.FINISHED && (
-        <div className="h-25 bg-black/20 flex items-center justify-center pb-safe">
+        <div className="h-25 bg-black/20 flex items-center justify-center pb-safe relative z-10">
           <button
             onClick={togglePause}
             className="w-14 h-14 bg-white rounded-full flex items-center justify-center text-surface active:opacity-80"
