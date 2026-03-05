@@ -136,7 +136,7 @@ export const TimerSetup: React.FC<TimerSetupProps> = ({
 
         <button
           onClick={onStart}
-          className="flex-[2] h-14 bg-primary/20 border border-primary/40 rounded-2xl flex items-center justify-center gap-2 text-primary hover:bg-primary/30 hover:border-primary/60 hover:shadow-[0_0_20px_rgba(0,240,255,0.4)] active:scale-95 transition-all font-bold tracking-wide"
+          className="flex-2 h-14 bg-primary/20 border border-primary/40 rounded-2xl flex items-center justify-center gap-2 text-primary hover:bg-primary/30 hover:border-primary/60 hover:shadow-[0_0_20px_rgba(0,240,255,0.4)] active:scale-95 transition-all font-bold tracking-wide"
         >
           <Play size={20} fill="currentColor" />
           <span className="text-lg">START</span>
