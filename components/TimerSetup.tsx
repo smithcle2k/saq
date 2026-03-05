@@ -49,6 +49,7 @@ export const TimerSetup: React.FC<TimerSetupProps> = ({
             value={config.prepTime}
             onChange={(v) => updateConfig('prepTime', v)}
             step={5}
+            min={5}
           />
 
           <NumberInput
