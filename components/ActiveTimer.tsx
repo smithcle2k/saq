@@ -27,7 +27,8 @@ const playBeep = (freq = 880, duration = 0.1) => {
     osc.type = 'sine';
     osc.frequency.setValueAtTime(freq, ctx.currentTime);
 
-    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+    // Raised cue volume to make countdown beeps easier to hear.
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
 
     osc.connect(gain);
