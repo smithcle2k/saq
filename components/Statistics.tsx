@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { ArrowLeft, Clock, Flame } from 'lucide-react';
+import { format, isToday, isYesterday, differenceInCalendarDays } from 'date-fns';
 import { WorkoutHistoryItem } from '../types';
 
 interface StatisticsProps {
@@ -15,28 +16,31 @@ const calculateStreak = (history: WorkoutHistoryItem[]): number => {
   );
 
   let streak = 0;
-  let currentDate = new Date();
-  currentDate.setHours(0, 0, 0, 0);
+  const currentDate = new Date();
 
-  const latestWorkoutDate = new Date(sortedHistory[0].date);
-  latestWorkoutDate.setHours(0, 0, 0, 0);
+  // Extract unique days using standard date format
+  const uniqueDates = Array.from(
+    new Set(sortedHistory.map((item) => format(new Date(item.date), 'yyyy-MM-dd')))
+  ).map((dateStr) => new Date(`${dateStr}T00:00:00`)); // Local time midnight
 
-  const diffDays = Math.floor((currentDate.getTime() - latestWorkoutDate.getTime()) / (24 * 60 * 60 * 1000));
+  if (uniqueDates.length === 0) return 0;
 
-  if (diffDays > 1) return 0;
+  // Streak broken if oldest is > 1 day ago
+  if (differenceInCalendarDays(currentDate, uniqueDates[0]) > 1) {
+    return 0;
+  }
 
-  const workoutDays = new Set(
-    sortedHistory.map((item) => {
-      const d = new Date(item.date);
-      d.setHours(0, 0, 0, 0);
-      return d.getTime();
-    })
-  );
-
-  let checkDate = new Date(latestWorkoutDate);
-  while (workoutDays.has(checkDate.getTime())) {
-    streak++;
-    checkDate.setDate(checkDate.getDate() - 1);
+  for (let i = 0; i < uniqueDates.length; i++) {
+    if (i === 0) {
+      streak++;
+    } else {
+      const diff = differenceInCalendarDays(uniqueDates[i - 1], uniqueDates[i]);
+      if (diff === 1) {
+        streak++;
+      } else {
+        break; // Streak broken
+      }
+    }
   }
 
   return streak;
@@ -47,11 +51,15 @@ const groupByDate = (history: WorkoutHistoryItem[]): Map<string, WorkoutHistoryI
 
   history.forEach((item) => {
     const date = new Date(item.date);
-    const dateKey = date.toLocaleDateString(undefined, {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric'
-    });
+    let dateKey = '';
+
+    if (isToday(date)) {
+      dateKey = 'Today';
+    } else if (isYesterday(date)) {
+      dateKey = 'Yesterday';
+    } else {
+      dateKey = format(date, 'EEE, MMM d');
+    }
 
     if (!groups.has(dateKey)) {
       groups.set(dateKey, []);
@@ -109,7 +117,10 @@ export const Statistics: React.FC<StatisticsProps> = ({ history, onClose }) => {
             <p className="text-3xl font-mono font-bold text-phase-prep-DEFAULT drop-shadow-[0_0_15px_rgba(245,158,11,0.5)]">
               {currentStreak}
             </p>
-            <Flame size={18} className="text-phase-prep-DEFAULT drop-shadow-[0_0_10px_rgba(245,158,11,0.5)]" />
+            <Flame
+              size={18}
+              className="text-phase-prep-DEFAULT drop-shadow-[0_0_10px_rgba(245,158,11,0.5)]"
+            />
           </div>
           <p className="text-xs font-semibold tracking-wider text-on-surface-variant uppercase mt-1 relative z-10">
             Day Streak
@@ -138,9 +149,7 @@ export const Statistics: React.FC<StatisticsProps> = ({ history, onClose }) => {
       <div className="flex-1 overflow-y-auto pr-1">
         {history.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center glass-panel rounded-2xl">
-            <p className="text-sm font-medium text-on-surface-variant">
-              No workouts yet
-            </p>
+            <p className="text-sm font-medium text-on-surface-variant">No workouts yet</p>
           </div>
         ) : (
           <div className="space-y-6">
@@ -156,10 +165,7 @@ export const Statistics: React.FC<StatisticsProps> = ({ history, onClose }) => {
                       className="bg-black/20 rounded-xl px-4 py-3 flex justify-between items-center text-sm hover:bg-black/40 transition-colors border border-white/5"
                     >
                       <span className="text-on-surface-variant font-medium">
-                        {new Date(item.date).toLocaleTimeString([], {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
+                        {format(new Date(item.date), 'h:mm a')}
                       </span>
                       <span className="font-mono font-bold text-on-surface text-base">
                         {formatDuration(item.duration)}

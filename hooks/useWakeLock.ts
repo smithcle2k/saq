@@ -1,23 +1,27 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect } from 'react';
+import NoSleep from 'nosleep.js';
+
+// Create a singleton instance so it can be enabled/disabled correctly
+const noSleep = new NoSleep();
 
 export const useWakeLock = () => {
-  const wakeLockRef = useRef<WakeLockSentinel | null>(null);
-
-  const requestWakeLock = useCallback(async () => {
-    if ('wakeLock' in navigator) {
-      try {
-        wakeLockRef.current = await navigator.wakeLock.request('screen');
-      } catch (err) {
-        // Wake lock can fail for low battery, background tabs, or unsupported states.
-        console.log('Wake lock request failed:', err);
+  const requestWakeLock = useCallback(() => {
+    try {
+      if (!noSleep.isEnabled) {
+        noSleep.enable();
       }
+    } catch (err) {
+      console.log('Wake lock request failed:', err);
     }
   }, []);
 
   const releaseWakeLock = useCallback(() => {
-    if (wakeLockRef.current) {
-      wakeLockRef.current.release();
-      wakeLockRef.current = null;
+    try {
+      if (noSleep.isEnabled) {
+        noSleep.disable();
+      }
+    } catch (err) {
+      console.log('Wake lock release failed:', err);
     }
   }, []);
 
@@ -27,6 +31,9 @@ export const useWakeLock = () => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         requestWakeLock();
+      } else {
+        // Optionally disable when in background to save battery,
+        // but interval timers usually shouldn't.
       }
     };
 

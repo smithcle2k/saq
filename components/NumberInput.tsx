@@ -23,7 +23,7 @@ export const NumberInput: React.FC<NumberInputProps> = ({
   isTime = true,
   readOnly = false,
 }) => {
-  const formatValue = (v: number) => (isTime ? formatTime(v) : v.toString());
+  const formatValue = useCallback((v: number) => (isTime ? formatTime(v) : v.toString()), [isTime]);
 
   const [localValue, setLocalValue] = useState(formatValue(value));
   const inputRef = useRef<HTMLInputElement>(null);
@@ -32,7 +32,7 @@ export const NumberInput: React.FC<NumberInputProps> = ({
 
   useEffect(() => {
     setLocalValue(formatValue(value));
-  }, [value, isTime]);
+  }, [value, formatValue]);
 
   const parseAndCommit = (inputValue: string) => {
     const cleanVal = inputValue.trim();
@@ -166,9 +166,7 @@ export const NumberInput: React.FC<NumberInputProps> = ({
           </div>
         )}
 
-        {readOnly && (
-          <div className="w-[113px] bg-black/10 border-l border-white/5" />
-        )}
+        {readOnly && <div className="w-[113px] bg-black/10 border-l border-white/5" />}
       </div>
     </div>
   );

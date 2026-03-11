@@ -1,0 +1,9 @@
+import 'fake-indexeddb/auto';
+import '@testing-library/jest-dom';
+import { cleanup } from '@testing-library/react';
+import { afterEach } from 'vitest';
+
+// Run cleanup after each test to prevent memory leaks and state contamination
+afterEach(() => {
+  cleanup();
+});

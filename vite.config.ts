@@ -3,7 +3,7 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
-const appBase = '/Interval-Trainer-Pro/';
+const appBase = process.env.VITE_APP_BASE || '/';
 
 export default defineConfig({
   base: appBase,

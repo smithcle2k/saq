@@ -1,9 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  content: [
-    "./index.html",
-    "./**/*.{js,ts,jsx,tsx}",
-  ],
+  content: ['./index.html', './**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
       colors: {
@@ -42,7 +39,7 @@ export default {
         },
         'on-surface': '#ffffff',
         'on-surface-variant': '#94a3b8',
-        'outline': 'rgba(255, 255, 255, 0.1)',
+        outline: 'rgba(255, 255, 255, 0.1)',
         'outline-variant': 'rgba(255, 255, 255, 0.05)',
       },
       fontSize: {
@@ -56,4 +53,4 @@ export default {
     },
   },
   plugins: [],
-}
+};

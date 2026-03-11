@@ -1,0 +1,50 @@
+
+> interval-trainer-pro@0.0.0 lint
+> eslint .
+
+
+/Users/csmith/saq/App.tsx
+  48:21  error  '_mode' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/Users/csmith/saq/components/ActiveTimer.tsx
+  1:36  error  'useCallback' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/csmith/saq/components/NumberInput.tsx
+  34:5  error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/Users/csmith/saq/components/NumberInput.tsx:34:5
+  32 |
+  33 |   useEffect(() => {
+> 34 |     setLocalValue(formatValue(value));
+     |     ^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  35 |   }, [value, isTime]);
+  36 |
+  37 |   const parseAndCommit = (inputValue: string) => {  react-hooks/set-state-in-effect
+  35:6  warning  React Hook useEffect has a missing dependency: 'formatValue'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   react-hooks/exhaustive-deps
+
+/Users/csmith/saq/hooks/useActiveTimerEngine.ts
+  328:7  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/Users/csmith/saq/hooks/useActiveTimerEngine.ts:328:7
+  326 |     if (phase === TimerPhase.FINISHED) return;
+  327 |     if (timeRemaining === 0) {
+> 328 |       triggerPhaseTransition();
+      |       ^^^^^^^^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  329 |     }
+  330 |   }, [timeRemaining, isPaused, phase, triggerPhaseTransition]);
+  331 |  react-hooks/set-state-in-effect
+
+✖ 5 problems (4 errors, 1 warning)
+

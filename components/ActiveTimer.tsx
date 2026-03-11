@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Pause, Play, X } from 'lucide-react';
 import { TimerConfig, TimerPhase } from '../types';
@@ -6,6 +6,7 @@ import { formatTime } from '../utils/timeUtils';
 import { speak } from '../utils/tts';
 import { useActiveTimerEngine } from '../hooks/useActiveTimerEngine';
 import { useWakeLock } from '../hooks/useWakeLock';
+import useSound from 'use-sound';
 
 interface ActiveTimerProps {
   config: TimerConfig;
@@ -13,33 +14,6 @@ interface ActiveTimerProps {
   onFinish: () => void;
   onExit: () => void;
 }
-
-// Simple beep utility using AudioContext
-const playBeep = (freq = 880, duration = 0.1) => {
-  try {
-    const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-    if (!AudioContext) return;
-
-    const ctx = new AudioContext();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(freq, ctx.currentTime);
-
-    // Raised cue volume to make countdown beeps easier to hear.
-    gain.gain.setValueAtTime(0.3, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
-
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-
-    osc.start();
-    osc.stop(ctx.currentTime + duration);
-  } catch (e) {
-    console.error("Audio context error", e);
-  }
-};
 
 // Phase configuration
 const phaseConfig = {
@@ -70,7 +44,6 @@ const phaseConfig = {
   },
 };
 
-
 // Round Progress Dots Component
 interface RoundDotsProps {
   currentRound: number;
@@ -87,12 +60,13 @@ const RoundDots: React.FC<RoundDotsProps> = ({ currentRound, totalRounds }) => {
       {Array.from({ length: showDots }, (_, i) => (
         <motion.div
           key={i}
-          className={`w-3 h-3 rounded-full transition-all duration-300 ${i < currentRound
-            ? 'bg-white'
-            : i === currentRound - 1
-              ? 'bg-white shadow-lg'
-              : 'bg-white/30'
-            }`}
+          className={`w-3 h-3 rounded-full transition-all duration-300 ${
+            i < currentRound
+              ? 'bg-white'
+              : i === currentRound - 1
+                ? 'bg-white shadow-lg'
+                : 'bg-white/30'
+          }`}
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ delay: i * 0.05, type: 'spring', stiffness: 400 }}
@@ -111,17 +85,18 @@ export const ActiveTimer: React.FC<ActiveTimerProps> = ({
   onFinish,
   onExit,
 }) => {
+  const isSaqMode = config.mode === 'SAQ';
+
   // Keep screen awake while timer is active
   useWakeLock();
 
+  const [playBeep] = useSound('/beep.wav', { volume: 0.5 });
+  const [playWhistle] = useSound('/whistle.wav', { volume: 0.8 });
+  const [playBuzzer] = useSound('/buzzer.wav', { volume: 0.8 });
+
   const hasAnnouncedPrepRef = useRef(false);
-  const {
-    phase,
-    timeRemaining,
-    currentRound,
-    isPaused,
-    togglePause,
-  } = useActiveTimerEngine({
+  const prevPhaseRef = useRef<TimerPhase | null>(null);
+  const { phase, timeRemaining, currentRound, isPaused, togglePause } = useActiveTimerEngine({
     config,
     exercises,
     onFinish,
@@ -142,10 +117,24 @@ export const ActiveTimer: React.FC<ActiveTimerProps> = ({
     if (phase === TimerPhase.PREP || phase === TimerPhase.REST) {
       // Beep on 3, 2, 1
       if (timeRemaining <= 3 && timeRemaining > 0) {
-        playBeep(880, 0.15); // High pitch, short beep
+        playBeep();
       }
     }
-  }, [timeRemaining, phase, isPaused]);
+  }, [timeRemaining, phase, isPaused, playBeep]);
+
+  // Phase entrance sounds
+  useEffect(() => {
+    if (isPaused) return;
+
+    if (prevPhaseRef.current && prevPhaseRef.current !== phase) {
+      if (phase === TimerPhase.WORK) {
+        playWhistle();
+      } else if (phase === TimerPhase.REST || phase === TimerPhase.COOL_DOWN) {
+        playBuzzer();
+      }
+    }
+    prevPhaseRef.current = phase;
+  }, [phase, isPaused, playWhistle, playBuzzer]);
 
   const currentPhaseConfig = phaseConfig[phase];
   const isCountdown = timeRemaining <= 3 && timeRemaining > 0;
@@ -217,7 +206,7 @@ export const ActiveTimer: React.FC<ActiveTimerProps> = ({
           <X size={24} />
         </motion.button>
         <div className="text-lg font-semibold tracking-wide">
-          {currentPhaseConfig.label}
+          {currentPhaseConfig.label} {isSaqMode && phase !== TimerPhase.FINISHED ? '• SAQ' : ''}
         </div>
         <div className="text-sm font-mono opacity-80 bg-white/10 px-3 py-1 rounded-full">
           {currentRound}/{config.rounds}
@@ -240,8 +229,9 @@ export const ActiveTimer: React.FC<ActiveTimerProps> = ({
             {/* Timer */}
             <div className="relative flex items-center justify-center">
               <motion.div
-                className={`text-timer-huge font-bold font-mono tracking-tighter drop-shadow-[0_0_30px_rgba(255,255,255,0.4)] ${isCountdown ? 'text-white' : ''
-                  }`}
+                className={`text-timer-huge font-bold font-mono tracking-tighter drop-shadow-[0_0_30px_rgba(255,255,255,0.4)] ${
+                  isCountdown ? 'text-white' : ''
+                }`}
                 animate={isCountdown ? { scale: [1, 1.1, 1] } : {}}
                 transition={{ duration: 0.5 }}
                 key={isCountdown ? timeRemaining : 'normal'}
@@ -253,21 +243,17 @@ export const ActiveTimer: React.FC<ActiveTimerProps> = ({
             {/* Exercise Display for Work Phase */}
             <AnimatePresence mode="wait">
               {phase === TimerPhase.PREP && (
-                <div className="mt-6 text-lg font-medium opacity-70">
-                  Get ready
-                </div>
+                <div className="mt-6 text-lg font-medium opacity-70">Get ready</div>
               )}
 
               {phase === TimerPhase.REST && (
                 <div className="mt-6 text-lg font-medium opacity-70">
-                  Breathe
+                  {isSaqMode ? 'Reset and reload' : 'Breathe'}
                 </div>
               )}
 
               {phase === TimerPhase.COOL_DOWN && (
-                <div className="mt-6 text-lg font-medium opacity-70">
-                  Stretch it out
-                </div>
+                <div className="mt-6 text-lg font-medium opacity-70">Stretch it out</div>
               )}
             </AnimatePresence>
 
@@ -283,9 +269,13 @@ export const ActiveTimer: React.FC<ActiveTimerProps> = ({
           <button
             onClick={togglePause}
             className="w-14 h-14 bg-white rounded-full flex items-center justify-center text-surface active:opacity-80"
-            aria-label={isPaused ? "Resume Timer" : "Pause Timer"}
+            aria-label={isPaused ? 'Resume Timer' : 'Pause Timer'}
           >
-            {isPaused ? <Play size={28} fill="currentColor" /> : <Pause size={28} fill="currentColor" />}
+            {isPaused ? (
+              <Play size={28} fill="currentColor" />
+            ) : (
+              <Pause size={28} fill="currentColor" />
+            )}
           </button>
         </div>
       )}

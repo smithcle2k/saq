@@ -46,16 +46,10 @@ async function generateIcons() {
     const outputPath = path.join(publicDir, name);
 
     if (name.endsWith('.ico')) {
-      await sharp(svg)
-        .resize(size, size)
-        .png()
-        .toFile(outputPath.replace('.ico', '.png'));
+      await sharp(svg).resize(size, size).png().toFile(outputPath.replace('.ico', '.png'));
       console.log(`Generated: ${name.replace('.ico', '.png')}`);
     } else {
-      await sharp(svg)
-        .resize(size, size)
-        .png()
-        .toFile(outputPath);
+      await sharp(svg).resize(size, size).png().toFile(outputPath);
       console.log(`Generated: ${name}`);
     }
   }

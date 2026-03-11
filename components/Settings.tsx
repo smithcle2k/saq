@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Reorder, useDragControls } from 'framer-motion';
 import { ArrowLeft, Plus, Trash2, GripVertical, RotateCcw } from 'lucide-react';
 
+const DEFAULT_CUES = ['Straight', 'Left', 'Right', 'Back', 'Turn around'];
+
 interface SettingsProps {
   exercises: string[];
   setExercises: React.Dispatch<React.SetStateAction<string[]>>;
@@ -31,9 +33,7 @@ const ExerciseItem: React.FC<ExerciseItemProps> = ({ exercise, onRemove }) => {
           <GripVertical size={20} />
         </button>
 
-        <span className="flex-1 text-on-surface font-medium text-lg tracking-wide">
-          {exercise}
-        </span>
+        <span className="flex-1 text-on-surface font-medium text-lg tracking-wide">{exercise}</span>
 
         <button
           onClick={onRemove}
@@ -46,11 +46,7 @@ const ExerciseItem: React.FC<ExerciseItemProps> = ({ exercise, onRemove }) => {
   );
 };
 
-export const Settings: React.FC<SettingsProps> = ({
-  exercises,
-  setExercises,
-  onClose,
-}) => {
+export const Settings: React.FC<SettingsProps> = ({ exercises, setExercises, onClose }) => {
   const [newExercise, setNewExercise] = useState('');
 
   const handleAdd = () => {
@@ -75,7 +71,7 @@ export const Settings: React.FC<SettingsProps> = ({
   };
 
   const handleReset = () => {
-    setExercises(['Right', 'Left', 'Come back', 'Straight']);
+    setExercises(DEFAULT_CUES);
   };
 
   return (
@@ -88,14 +84,14 @@ export const Settings: React.FC<SettingsProps> = ({
         >
           <ArrowLeft size={22} />
         </button>
-        <h2 className="text-xl font-bold tracking-wider text-on-surface">EXERCISES</h2>
+        <h2 className="text-xl font-bold tracking-wider text-on-surface">CUES</h2>
         <div className="w-12" />
       </div>
 
       {/* Add Exercise */}
       <div className="mb-6 glass-panel p-5 rounded-2xl">
         <p className="text-xs font-semibold tracking-wider text-primary uppercase mb-3">
-          Add new movement
+          Add new cue
         </p>
         <div className="flex gap-3">
           <input
@@ -103,7 +99,7 @@ export const Settings: React.FC<SettingsProps> = ({
             value={newExercise}
             onChange={(e) => setNewExercise(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="e.g. Burpees"
+            placeholder="e.g. Shuffle left"
             className="flex-1 bg-black/20 text-on-surface px-4 py-3.5 rounded-xl border border-white/5 focus:outline-none focus:border-primary focus:shadow-[0_0_15px_rgba(0,240,255,0.2)] transition-all font-medium placeholder:text-on-surface-variant/40"
           />
           <button
@@ -120,7 +116,7 @@ export const Settings: React.FC<SettingsProps> = ({
       <div className="flex-1 overflow-y-auto pr-1">
         {exercises.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center text-on-surface-variant glass-panel rounded-2xl">
-            <p className="text-sm font-medium">No exercises yet</p>
+            <p className="text-sm font-medium">No cues yet</p>
           </div>
         ) : (
           <Reorder.Group

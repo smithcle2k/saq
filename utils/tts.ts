@@ -1,5 +1,7 @@
 const isSpeechSupported = () =>
-  typeof window !== 'undefined' && 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
+  typeof window !== 'undefined' &&
+  'speechSynthesis' in window &&
+  'SpeechSynthesisUtterance' in window;
 
 let voicesReadyPromise: Promise<void> | null = null;
 let preferredVoice: SpeechSynthesisVoice | undefined;
@@ -14,7 +16,9 @@ const selectPreferredVoice = () => {
   const prioritized = voices.find(
     (voice) =>
       voice.lang.toLowerCase().startsWith('en') &&
-      (voice.name.includes('Google') || voice.name.includes('Daniel') || voice.name.includes('Samantha'))
+      (voice.name.includes('Google') ||
+        voice.name.includes('Daniel') ||
+        voice.name.includes('Samantha'))
   );
 
   if (prioritized) return prioritized;

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { TimerConfig, View, WorkoutHistoryItem } from './types';
+import { TimerConfig, TimerMode, View, WorkoutHistoryItem } from './types';
 import { TimerSetup } from './components/TimerSetup';
 import { ActiveTimer } from './components/ActiveTimer';
 import { Settings } from './components/Settings';
@@ -8,21 +8,7 @@ import { Statistics } from './components/Statistics';
 import { Tutorial } from './components/Tutorial';
 import { calculateTotalTime } from './utils/timeUtils';
 import { initializeSpeech } from './utils/tts';
-
-const DEFAULT_CONFIG: TimerConfig = {
-  prepTime: 10,
-  workTime: 5,
-  restTime: 55,
-  rounds: 8,
-  coolDownTime: 60,
-};
-
-const DEFAULT_EXERCISES = [
-  'Right',
-  'Left',
-  'Come back',
-  'Straight'
-];
+import { useStore } from './store';
 
 // Page transition variants
 const pageVariants = {
@@ -39,32 +25,39 @@ const pageTransition = {
 
 function App() {
   const [view, setView] = useState<View>('SETUP');
-  const [config, setConfig] = useState<TimerConfig>(DEFAULT_CONFIG);
-  const [showTutorial, setShowTutorial] = useState<boolean>(
-    () => !localStorage.getItem('tutorialSeen')
-  );
 
-  const handleDismissTutorial = () => {
-    localStorage.setItem('tutorialSeen', '1');
-    setShowTutorial(false);
+  const mode = useStore((state) => state.mode);
+  const modeConfigs = useStore((state) => state.modeConfigs);
+  const exercises = useStore((state) => state.exercises);
+  const history = useStore((state) => state.history);
+  const tutorialSeen = useStore((state) => state.tutorialSeen);
+
+  const setMode = useStore((state) => state.setMode);
+  const setModeConfigs = useStore((state) => state.setModeConfigs);
+  const setExercises = useStore((state) => state.setExercises);
+  const addHistoryItem = useStore((state) => state.addHistoryItem);
+  const setTutorialSeen = useStore((state) => state.setTutorialSeen);
+
+  const showTutorial = !tutorialSeen;
+  const config: TimerConfig = { mode, ...modeConfigs[mode] };
+
+  const setConfig: React.Dispatch<React.SetStateAction<TimerConfig>> = (updater) => {
+    setModeConfigs((prev) => {
+      const currentConfig: TimerConfig = { mode, ...prev[mode] };
+      const nextConfig = typeof updater === 'function' ? updater(currentConfig) : updater;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { mode: _mode, ...nextValues } = nextConfig;
+
+      return {
+        ...prev,
+        [mode]: nextValues,
+      };
+    });
   };
 
-  // Load exercises from localStorage
-  const [exercises, setExercises] = useState<string[]>(() => {
-    const saved = localStorage.getItem('customExercises');
-    return saved ? JSON.parse(saved) : DEFAULT_EXERCISES;
-  });
-
-  // Load history from localStorage
-  const [history, setHistory] = useState<WorkoutHistoryItem[]>(() => {
-    const saved = localStorage.getItem('workoutHistory');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  // Save exercises whenever they change
-  useEffect(() => {
-    localStorage.setItem('customExercises', JSON.stringify(exercises));
-  }, [exercises]);
+  const handleDismissTutorial = () => {
+    setTutorialSeen(true);
+  };
 
   // Unlock speech synthesis on the first user interaction.
   useEffect(() => {
@@ -84,9 +77,7 @@ function App() {
   }, []);
 
   const saveHistory = (newItem: WorkoutHistoryItem) => {
-    const updatedHistory = [newItem, ...history];
-    setHistory(updatedHistory);
-    localStorage.setItem('workoutHistory', JSON.stringify(updatedHistory));
+    addHistoryItem(newItem);
   };
 
   const handleStart = () => {
@@ -94,12 +85,16 @@ function App() {
     setView('TIMER');
   };
 
+  const handleModeChange = (nextMode: TimerMode) => {
+    setMode(nextMode);
+  };
+
   const handleFinish = () => {
     // Workout completed successfully
     const duration = calculateTotalTime(config);
     saveHistory({
       date: new Date().toISOString(),
-      duration: duration
+      duration: duration,
     });
     setView('SETUP');
   };
@@ -122,8 +117,9 @@ function App() {
   };
 
   // Check for reduced motion preference
-  const prefersReducedMotion = typeof window !== 'undefined'
-    && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  const prefersReducedMotion =
+    typeof window !== 'undefined' &&
+    window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
   return (
     <div className="h-screen w-full bg-transparent text-on-surface overflow-hidden flex flex-col font-sans relative">
@@ -141,6 +137,8 @@ function App() {
             <TimerSetup
               config={config}
               setConfig={setConfig}
+              mode={mode}
+              onModeChange={handleModeChange}
               onStart={handleStart}
               onOpenSettings={handleOpenSettings}
               onOpenStats={handleOpenStats}
@@ -176,10 +174,7 @@ function App() {
             transition={pageTransition}
             className="h-full"
           >
-            <Statistics
-              history={history}
-              onClose={handleCloseSubView}
-            />
+            <Statistics history={history} onClose={handleCloseSubView} />
           </motion.div>
         )}
 
@@ -205,9 +200,7 @@ function App() {
 
       {/* First-time tutorial overlay */}
       <AnimatePresence>
-        {showTutorial && (
-          <Tutorial onDismiss={handleDismissTutorial} />
-        )}
+        {showTutorial && <Tutorial onDismiss={handleDismissTutorial} />}
       </AnimatePresence>
     </div>
   );
