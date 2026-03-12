@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Pause, Play, X } from 'lucide-react';
 import { TimerConfig, TimerPhase } from '../types';
 import { formatTime } from '../utils/timeUtils';
+import { shouldAnnounceRestFiveSeconds, shouldPlayCountdownBeep } from '../utils/timerAlerts';
 import { speak } from '../utils/tts';
 import { useActiveTimerEngine } from '../hooks/useActiveTimerEngine';
 import { useWakeLock } from '../hooks/useWakeLock';
@@ -95,6 +96,7 @@ export const ActiveTimer: React.FC<ActiveTimerProps> = ({
   const [playBuzzer] = useSound('/buzzer.wav', { volume: 0.8 });
 
   const hasAnnouncedPrepRef = useRef(false);
+  const hasAnnouncedRestFiveSecondsRef = useRef(false);
   const prevPhaseRef = useRef<TimerPhase | null>(null);
   const { phase, timeRemaining, currentRound, isPaused, togglePause } = useActiveTimerEngine({
     config,
@@ -111,16 +113,29 @@ export const ActiveTimer: React.FC<ActiveTimerProps> = ({
 
   // Synchronized countdown beeps
   useEffect(() => {
-    if (isPaused) return;
-
-    // Check if we are in a phase that needs a countdown
-    if (phase === TimerPhase.PREP || phase === TimerPhase.REST) {
-      // Beep on 3, 2, 1
-      if (timeRemaining <= 3 && timeRemaining > 0) {
-        playBeep();
-      }
+    if (shouldPlayCountdownBeep(phase, timeRemaining, isPaused)) {
+      playBeep();
     }
   }, [timeRemaining, phase, isPaused, playBeep]);
+
+  useEffect(() => {
+    if (phase !== TimerPhase.REST) {
+      hasAnnouncedRestFiveSecondsRef.current = false;
+      return;
+    }
+
+    if (
+      shouldAnnounceRestFiveSeconds(
+        phase,
+        timeRemaining,
+        isPaused,
+        hasAnnouncedRestFiveSecondsRef.current
+      )
+    ) {
+      hasAnnouncedRestFiveSecondsRef.current = true;
+      speak('5 Seconds', { interrupt: true });
+    }
+  }, [timeRemaining, phase, isPaused]);
 
   // Phase entrance sounds
   useEffect(() => {

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { TimerConfig, TimerPhase } from '../types';
+import { buildSaqCuePlan } from '../utils/saqCuePlan';
 
 interface SaqCue {
   id: number;
@@ -27,8 +28,6 @@ interface UseActiveTimerEngineParams {
   onAnnounce: (message: string) => void;
 }
 
-const DEFAULT_SAQ_CUES = ['Straight', 'Left', 'Right', 'Back', 'Turn around'];
-
 const createInitialSnapshot = (config: TimerConfig): TimerSnapshot => ({
   phase: TimerPhase.PREP,
   timeRemaining: config.prepTime,
@@ -36,54 +35,6 @@ const createInitialSnapshot = (config: TimerConfig): TimerSnapshot => ({
   currentExercise: '',
   cuePlan: [],
 });
-
-const getCuePool = (exercises: string[]) => (exercises.length > 0 ? exercises : DEFAULT_SAQ_CUES);
-
-const buildSaqCuePlan = (exercises: string[], workTime: number): SaqCue[] => {
-  const cuePool = getCuePool(exercises);
-  const workDurationMs = workTime * 1000;
-  const desiredCueCount = Math.min(3, Math.max(1, Math.floor(workDurationMs / 1500)));
-  const minOffsetMs = 700;
-  const maxOffsetMs = Math.max(minOffsetMs, workDurationMs - 500);
-  const minGapMs = 850;
-  const offsets: number[] = [];
-  let attempts = 0;
-
-  while (offsets.length < desiredCueCount && attempts < 200) {
-    attempts += 1;
-    const candidate = Math.round(
-      minOffsetMs + Math.random() * Math.max(0, maxOffsetMs - minOffsetMs)
-    );
-    const isFarEnough = offsets.every((offset) => Math.abs(offset - candidate) >= minGapMs);
-
-    if (isFarEnough) {
-      offsets.push(candidate);
-    }
-  }
-
-  if (offsets.length < desiredCueCount) {
-    for (let index = offsets.length; index < desiredCueCount; index += 1) {
-      const ratio = (index + 1) / (desiredCueCount + 1);
-      offsets.push(Math.round(workDurationMs * ratio));
-    }
-  }
-
-  offsets.sort((left, right) => left - right);
-
-  let previousCue = '';
-  return offsets.map((offsetMs, index) => {
-    const availableCues = cuePool.filter((cue) => cue !== previousCue);
-    const selectionPool = availableCues.length > 0 ? availableCues : cuePool;
-    const label = selectionPool[Math.floor(Math.random() * selectionPool.length)];
-    previousCue = label;
-
-    return {
-      id: index + 1,
-      label,
-      offsetMs,
-    };
-  });
-};
 
 const getNextSnapshot = (
   current: TimerSnapshot,

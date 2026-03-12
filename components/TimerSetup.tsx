@@ -79,7 +79,7 @@ export const TimerSetup: React.FC<TimerSetupProps> = ({
                   Reactive Change Of Direction
                 </p>
                 <p className="mt-1 text-sm text-on-surface-variant">
-                  Listen closely! The app will shout out quick, random directions for 5 seconds to
+                  Listen closely! The app will shout out quick, random directions for 4 seconds to
                   test how fast you can react.
                 </p>
               </div>

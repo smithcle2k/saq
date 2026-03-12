@@ -18,6 +18,14 @@ const idbStorage: StateStorage = {
 
 type ModeConfigMap = Record<TimerMode, Omit<TimerConfig, 'mode'>>;
 
+interface PersistedAppState {
+  mode?: TimerMode;
+  modeConfigs?: Partial<Record<TimerMode, Partial<Omit<TimerConfig, 'mode'>>>>;
+  exercises?: string[];
+  history?: WorkoutHistoryItem[];
+  tutorialSeen?: boolean;
+}
+
 interface AppState {
   mode: TimerMode;
   modeConfigs: ModeConfigMap;
@@ -34,24 +42,50 @@ interface AppState {
   setTutorialSeen: (seen: boolean) => void;
 }
 
-const DEFAULT_CONFIGS: ModeConfigMap = {
+export const DEFAULT_CONFIGS: ModeConfigMap = {
   INTERVAL: {
     prepTime: 10,
     workTime: 5,
     restTime: 55,
     rounds: 8,
-    coolDownTime: 60,
+    coolDownTime: 0,
   },
   SAQ: {
     prepTime: 10,
-    workTime: 5,
+    workTime: 4,
     restTime: 55,
     rounds: 5,
-    coolDownTime: 60,
+    coolDownTime: 0,
   },
 };
 
 const DEFAULT_EXERCISES = ['Straight', 'Left', 'Right', 'Back', 'Turn around'];
+
+const mergeModeConfig = (
+  mode: TimerMode,
+  persistedConfig: Partial<Omit<TimerConfig, 'mode'>> | undefined,
+  version: number
+) => {
+  const defaults = DEFAULT_CONFIGS[mode];
+  const nextConfig = {
+    ...defaults,
+    ...persistedConfig,
+  };
+
+  if (version < 1 && persistedConfig?.coolDownTime === 60) {
+    nextConfig.coolDownTime = 0;
+  }
+
+  if (
+    mode === 'SAQ' &&
+    version < 3 &&
+    (persistedConfig?.workTime === 5 || persistedConfig?.workTime === 3)
+  ) {
+    nextConfig.workTime = 4;
+  }
+
+  return nextConfig;
+};
 
 export const useStore = create<AppState>()(
   persist(
@@ -87,7 +121,20 @@ export const useStore = create<AppState>()(
     }),
     {
       name: 'interval-trainer-storage',
+      version: 3,
       storage: createJSONStorage(() => idbStorage),
+      migrate: (persistedState: unknown, version) => {
+        const state = (persistedState ?? {}) as PersistedAppState;
+        const modeConfigs = state.modeConfigs ?? {};
+
+        return {
+          ...state,
+          modeConfigs: {
+            INTERVAL: mergeModeConfig('INTERVAL', modeConfigs.INTERVAL, version),
+            SAQ: mergeModeConfig('SAQ', modeConfigs.SAQ, version),
+          },
+        };
+      },
     }
   )
 );
