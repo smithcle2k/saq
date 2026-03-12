@@ -1,11 +1,13 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { DEFAULT_CONFIGS, useStore } from './store';
+import { DEFAULT_CUES, LEGACY_DEFAULT_CUES } from './utils/defaultCues';
 
 describe('useStore', () => {
   beforeEach(() => {
     useStore.setState({
       mode: 'INTERVAL',
       modeConfigs: DEFAULT_CONFIGS,
+      exercises: DEFAULT_CUES,
       history: [],
       tutorialSeen: false,
     });
@@ -32,6 +34,13 @@ describe('useStore', () => {
     const state = useStore.getState();
 
     expect(state.modeConfigs.SAQ.workTime).toBe(4);
+  });
+
+  it('should migrate the legacy default cues to the current defaults', async () => {
+    const migrate = useStore.persist.getOptions().migrate;
+    const migratedState = await migrate?.({ exercises: LEGACY_DEFAULT_CUES }, 3);
+
+    expect(migratedState?.exercises).toEqual(DEFAULT_CUES);
   });
 
   it('should add item to history', () => {

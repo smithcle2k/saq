@@ -1,12 +1,12 @@
+import { DEFAULT_CUES } from './defaultCues';
+
 interface SaqCue {
   id: number;
   label: string;
   offsetMs: number;
 }
 
-const DEFAULT_SAQ_CUES = ['Straight', 'Left', 'Right', 'Back', 'Turn around'];
-
-const getCuePool = (exercises: string[]) => (exercises.length > 0 ? exercises : DEFAULT_SAQ_CUES);
+const getCuePool = (exercises: string[]) => (exercises.length > 0 ? exercises : DEFAULT_CUES);
 
 const getDesiredCueCount = (workDurationMs: number) => {
   if (workDurationMs <= 4000) return 2;

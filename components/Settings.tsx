@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { Reorder, useDragControls } from 'framer-motion';
 import { ArrowLeft, Plus, Trash2, GripVertical, RotateCcw } from 'lucide-react';
-
-const DEFAULT_CUES = ['Straight', 'Left', 'Right', 'Back', 'Turn around'];
+import { DEFAULT_CUES } from '../utils/defaultCues';
 
 interface SettingsProps {
   exercises: string[];

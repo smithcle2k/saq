@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage, StateStorage } from 'zustand/middleware';
 import { get, set, del } from 'idb-keyval';
 import { TimerConfig, TimerMode, WorkoutHistoryItem } from './types';
+import { DEFAULT_CUES, LEGACY_DEFAULT_CUES, matchesCueList } from './utils/defaultCues';
 
 // IndexedDB storage for Zustand to prevent UI freezes on large payloads
 const idbStorage: StateStorage = {
@@ -59,8 +60,6 @@ export const DEFAULT_CONFIGS: ModeConfigMap = {
   },
 };
 
-const DEFAULT_EXERCISES = ['Straight', 'Left', 'Right', 'Back', 'Turn around'];
-
 const mergeModeConfig = (
   mode: TimerMode,
   persistedConfig: Partial<Omit<TimerConfig, 'mode'>> | undefined,
@@ -92,7 +91,7 @@ export const useStore = create<AppState>()(
     (set) => ({
       mode: 'INTERVAL',
       modeConfigs: DEFAULT_CONFIGS,
-      exercises: DEFAULT_EXERCISES,
+      exercises: DEFAULT_CUES,
       history: [],
       tutorialSeen: false,
 
@@ -121,14 +120,19 @@ export const useStore = create<AppState>()(
     }),
     {
       name: 'interval-trainer-storage',
-      version: 3,
+      version: 4,
       storage: createJSONStorage(() => idbStorage),
       migrate: (persistedState: unknown, version) => {
         const state = (persistedState ?? {}) as PersistedAppState;
         const modeConfigs = state.modeConfigs ?? {};
+        const exercises =
+          version < 4 && state.exercises && matchesCueList(state.exercises, LEGACY_DEFAULT_CUES)
+            ? DEFAULT_CUES
+            : state.exercises;
 
         return {
           ...state,
+          exercises,
           modeConfigs: {
             INTERVAL: mergeModeConfig('INTERVAL', modeConfigs.INTERVAL, version),
             SAQ: mergeModeConfig('SAQ', modeConfigs.SAQ, version),
