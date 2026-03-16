@@ -36,4 +36,13 @@ describe('buildSaqCuePlan', () => {
     expect(cuePlan).toHaveLength(3);
     expect(cuePlan.every((cue) => cue.label !== 'Straight')).toBe(true);
   });
+
+  it('uses the updated stock default cue pool when the current default list is provided', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+
+    const cuePlan = buildSaqCuePlan(['Left', 'Right', 'Come Back']);
+
+    expect(cuePlan).toHaveLength(3);
+    expect(cuePlan.every((cue) => cue.label !== 'Straight')).toBe(true);
+  });
 });

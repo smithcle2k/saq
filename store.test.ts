@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { DEFAULT_CONFIGS, useStore } from './store';
-import { DEFAULT_CUES, LEGACY_DEFAULT_CUES } from './utils/defaultCues';
+import { DEFAULT_CUES, LEGACY_DEFAULT_CUES, PREVIOUS_DEFAULT_CUES } from './utils/defaultCues';
 
 describe('useStore', () => {
   beforeEach(() => {
@@ -30,10 +30,10 @@ describe('useStore', () => {
     expect(state.modeConfigs.SAQ.coolDownTime).toBe(0);
   });
 
-  it('should initialize slow mode to off for both modes', () => {
+  it('should initialize slow mode on for interval and off for SAQ', () => {
     const state = useStore.getState();
 
-    expect(state.modeConfigs.INTERVAL.slowMode).toBe(false);
+    expect(state.modeConfigs.INTERVAL.slowMode).toBe(true);
     expect(state.modeConfigs.SAQ.slowMode).toBe(false);
   });
 
@@ -50,6 +50,13 @@ describe('useStore', () => {
     expect(migratedState?.exercises).toEqual(DEFAULT_CUES);
   });
 
+  it('should migrate the previous stock default cues to the current defaults', async () => {
+    const migrate = useStore.persist.getOptions().migrate;
+    const migratedState = await migrate?.({ exercises: PREVIOUS_DEFAULT_CUES }, 6);
+
+    expect(migratedState?.exercises).toEqual(DEFAULT_CUES);
+  });
+
   it('should backfill slow mode during migration', async () => {
     const migrate = useStore.persist.getOptions().migrate;
     const migratedState = await migrate?.(
@@ -62,7 +69,7 @@ describe('useStore', () => {
       4
     );
 
-    expect(migratedState?.modeConfigs.INTERVAL.slowMode).toBe(false);
+    expect(migratedState?.modeConfigs.INTERVAL.slowMode).toBe(true);
     expect(migratedState?.modeConfigs.SAQ.slowMode).toBe(false);
     expect(migratedState?.modeConfigs.SAQ.workTime).toBe(3);
   });

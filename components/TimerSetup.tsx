@@ -1,5 +1,5 @@
 import React from 'react';
-import { Settings, BarChart2, Play, Timer, Zap } from 'lucide-react';
+import { Settings, BarChart2, Play, Timer } from 'lucide-react';
 import { TimerConfig, TimerMode } from '../types';
 import { NumberInput } from './NumberInput';
 import { calculateTotalTime, formatTime } from '../utils/timeUtils';
@@ -70,26 +70,6 @@ export const TimerSetup: React.FC<TimerSetupProps> = ({
           </div>
         </div>
 
-        {isSaqMode && (
-          <div className="mb-5 glass-panel rounded-2xl p-4 relative overflow-hidden">
-            <div className="absolute inset-0 bg-primary/5 blur-xl" />
-            <div className="relative z-10 flex items-start gap-3">
-              <div className="mt-0.5 rounded-full bg-primary/15 p-2 text-primary">
-                <Zap size={18} />
-              </div>
-              <div>
-                <p className="text-xs font-bold tracking-[0.24em] text-primary uppercase">
-                  Reactive Change Of Direction
-                </p>
-                <p className="mt-1 text-sm text-on-surface-variant">
-                  Listen closely! Each 3-second SAQ round now fires a random cue at the start,
-                  another at 00:01, and another at 00:02 before rest begins.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
         {!isSaqMode && (
           <button
             type="button"
@@ -105,10 +85,6 @@ export const TimerSetup: React.FC<TimerSetupProps> = ({
               <div>
                 <p className="text-xs font-bold tracking-[0.24em] text-primary uppercase">
                   Slow Mode
-                </p>
-                <p className="mt-1 text-sm text-on-surface-variant">
-                  Work rounds say Go, wait 1 second, say Slow Down, then announce the exercise 1
-                  second later.
                 </p>
               </div>
               <div

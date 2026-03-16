@@ -18,7 +18,7 @@ const sections: Section[] = [
   },
   {
     heading: 'Interval Mode vs SAQ Mode',
-    body: 'Interval Mode is the classic round-based timer. It calls a single cue at the start of the work phase, and you can enable Slow Mode to say Go, wait 1 second, say Slow Down, then announce the exercise 1 second later. SAQ (Speed, Agility, Quickness) Mode is built for reactive change-of-direction work. Each 3-second work round now fires three randomized cues: one at the start, one at 00:01, and one at 00:02.',
+    body: 'Interval Mode is the classic round-based timer. It calls a single cue at the start of the work phase. SAQ (Speed, Agility, Quickness) Mode is built for reactive change-of-direction work. Each 3-second work round now fires three randomized cues: one at the start, one at 00:01, and one at 00:02.',
   },
   {
     heading: 'Setting up your workout',

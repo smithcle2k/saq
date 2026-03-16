@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Reorder, useDragControls } from 'framer-motion';
 import { ArrowLeft, Plus, Trash2, GripVertical, RotateCcw } from 'lucide-react';
 import { DEFAULT_CUES } from '../utils/defaultCues';
+import { validateCueLabel } from '../utils/cueModeration';
 
 interface SettingsProps {
   exercises: string[];
@@ -47,12 +48,20 @@ const ExerciseItem: React.FC<ExerciseItemProps> = ({ exercise, onRemove }) => {
 
 export const Settings: React.FC<SettingsProps> = ({ exercises, setExercises, onClose }) => {
   const [newExercise, setNewExercise] = useState('');
+  const [inputError, setInputError] = useState('');
 
   const handleAdd = () => {
-    if (newExercise.trim()) {
-      setExercises([...exercises, newExercise.trim()]);
-      setNewExercise('');
+    const candidate = newExercise.trim();
+    const validation = validateCueLabel(candidate);
+
+    if (!validation.isAllowed) {
+      setInputError(validation.error);
+      return;
     }
+
+    setExercises([...exercises, candidate]);
+    setNewExercise('');
+    setInputError('');
   };
 
   const handleRemove = (index: number) => {
@@ -96,9 +105,16 @@ export const Settings: React.FC<SettingsProps> = ({ exercises, setExercises, onC
           <input
             type="text"
             value={newExercise}
-            onChange={(e) => setNewExercise(e.target.value)}
+            onChange={(e) => {
+              setNewExercise(e.target.value);
+              if (inputError) {
+                setInputError('');
+              }
+            }}
             onKeyDown={handleKeyDown}
             placeholder="e.g. Shuffle left"
+            aria-invalid={inputError ? 'true' : 'false'}
+            aria-describedby={inputError ? 'cue-input-error' : undefined}
             className="flex-1 bg-black/20 text-on-surface px-4 py-3.5 rounded-xl border border-white/5 focus:outline-none focus:border-primary focus:shadow-[0_0_15px_rgba(0,240,255,0.2)] transition-all font-medium placeholder:text-on-surface-variant/40"
           />
           <button
@@ -109,6 +125,11 @@ export const Settings: React.FC<SettingsProps> = ({ exercises, setExercises, onC
             <Plus size={24} />
           </button>
         </div>
+        {inputError ? (
+          <p id="cue-input-error" className="mt-3 text-sm font-medium text-phase-rest-DEFAULT">
+            {inputError}
+          </p>
+        ) : null}
       </div>
 
       {/* Exercise List */}

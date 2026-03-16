@@ -1,4 +1,9 @@
-import { DEFAULT_CUES, SAQ_DEFAULT_CUES, matchesCueList } from './defaultCues';
+import {
+  DEFAULT_CUES,
+  PREVIOUS_DEFAULT_CUES,
+  SAQ_DEFAULT_CUES,
+  matchesCueList,
+} from './defaultCues';
 
 interface SaqCue {
   id: number;
@@ -7,7 +12,11 @@ interface SaqCue {
 }
 
 const getCuePool = (exercises: string[]) => {
-  if (exercises.length === 0 || matchesCueList(exercises, DEFAULT_CUES)) {
+  if (
+    exercises.length === 0 ||
+    matchesCueList(exercises, DEFAULT_CUES) ||
+    matchesCueList(exercises, PREVIOUS_DEFAULT_CUES)
+  ) {
     return SAQ_DEFAULT_CUES;
   }
 
