@@ -30,10 +30,17 @@ describe('useStore', () => {
     expect(state.modeConfigs.SAQ.coolDownTime).toBe(0);
   });
 
-  it('should initialize SAQ work to four seconds', () => {
+  it('should initialize slow mode to off for both modes', () => {
     const state = useStore.getState();
 
-    expect(state.modeConfigs.SAQ.workTime).toBe(4);
+    expect(state.modeConfigs.INTERVAL.slowMode).toBe(false);
+    expect(state.modeConfigs.SAQ.slowMode).toBe(false);
+  });
+
+  it('should initialize SAQ work to three seconds', () => {
+    const state = useStore.getState();
+
+    expect(state.modeConfigs.SAQ.workTime).toBe(3);
   });
 
   it('should migrate the legacy default cues to the current defaults', async () => {
@@ -41,6 +48,23 @@ describe('useStore', () => {
     const migratedState = await migrate?.({ exercises: LEGACY_DEFAULT_CUES }, 3);
 
     expect(migratedState?.exercises).toEqual(DEFAULT_CUES);
+  });
+
+  it('should backfill slow mode during migration', async () => {
+    const migrate = useStore.persist.getOptions().migrate;
+    const migratedState = await migrate?.(
+      {
+        modeConfigs: {
+          INTERVAL: { prepTime: 10, workTime: 5, restTime: 55, rounds: 8, coolDownTime: 0 },
+          SAQ: { prepTime: 10, workTime: 4, restTime: 55, rounds: 5, coolDownTime: 0 },
+        },
+      },
+      4
+    );
+
+    expect(migratedState?.modeConfigs.INTERVAL.slowMode).toBe(false);
+    expect(migratedState?.modeConfigs.SAQ.slowMode).toBe(false);
+    expect(migratedState?.modeConfigs.SAQ.workTime).toBe(3);
   });
 
   it('should add item to history', () => {

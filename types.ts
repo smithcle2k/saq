@@ -7,6 +7,7 @@ export interface TimerConfig {
   restTime: number; // in seconds
   rounds: number;
   coolDownTime: number; // in seconds
+  slowMode: boolean;
 }
 
 export enum TimerPhase {

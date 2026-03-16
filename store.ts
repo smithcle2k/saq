@@ -50,13 +50,15 @@ export const DEFAULT_CONFIGS: ModeConfigMap = {
     restTime: 55,
     rounds: 8,
     coolDownTime: 0,
+    slowMode: false,
   },
   SAQ: {
     prepTime: 10,
-    workTime: 4,
+    workTime: 3,
     restTime: 55,
     rounds: 5,
     coolDownTime: 0,
+    slowMode: false,
   },
 };
 
@@ -75,12 +77,8 @@ const mergeModeConfig = (
     nextConfig.coolDownTime = 0;
   }
 
-  if (
-    mode === 'SAQ' &&
-    version < 3 &&
-    (persistedConfig?.workTime === 5 || persistedConfig?.workTime === 3)
-  ) {
-    nextConfig.workTime = 4;
+  if (mode === 'SAQ' && version < 6) {
+    nextConfig.workTime = 3;
   }
 
   return nextConfig;
@@ -120,7 +118,7 @@ export const useStore = create<AppState>()(
     }),
     {
       name: 'interval-trainer-storage',
-      version: 4,
+      version: 6,
       storage: createJSONStorage(() => idbStorage),
       migrate: (persistedState: unknown, version) => {
         const state = (persistedState ?? {}) as PersistedAppState;

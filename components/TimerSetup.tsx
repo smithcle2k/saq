@@ -23,7 +23,10 @@ export const TimerSetup: React.FC<TimerSetupProps> = ({
   onOpenSettings,
   onOpenStats,
 }) => {
-  const updateConfig = (key: Exclude<keyof TimerConfig, 'mode'>, value: number) => {
+  const updateConfig = (
+    key: 'prepTime' | 'workTime' | 'restTime' | 'rounds' | 'coolDownTime',
+    value: number
+  ) => {
     setConfig((prev) => ({ ...prev, [key]: value }));
   };
 
@@ -79,12 +82,48 @@ export const TimerSetup: React.FC<TimerSetupProps> = ({
                   Reactive Change Of Direction
                 </p>
                 <p className="mt-1 text-sm text-on-surface-variant">
-                  Listen closely! The app will shout out quick, random directions for 4 seconds to
-                  test how fast you can react.
+                  Listen closely! Each 3-second SAQ round now fires a random cue at the start,
+                  another at 00:01, and another at 00:02 before rest begins.
                 </p>
               </div>
             </div>
           </div>
+        )}
+
+        {!isSaqMode && (
+          <button
+            type="button"
+            onClick={() => setConfig((prev) => ({ ...prev, slowMode: !prev.slowMode }))}
+            className={`mb-5 w-full rounded-2xl border p-4 text-left transition-all ${
+              config.slowMode
+                ? 'border-primary/50 bg-primary/15 shadow-[0_0_20px_rgba(0,240,255,0.18)]'
+                : 'border-white/5 bg-black/10 hover:border-white/10 hover:bg-black/15'
+            }`}
+            aria-pressed={config.slowMode}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-bold tracking-[0.24em] text-primary uppercase">
+                  Slow Mode
+                </p>
+                <p className="mt-1 text-sm text-on-surface-variant">
+                  Work rounds say Go, wait 1 second, say Slow Down, then announce the exercise 1
+                  second later.
+                </p>
+              </div>
+              <div
+                className={`mt-1 flex h-7 w-12 rounded-full p-1 transition-colors ${
+                  config.slowMode ? 'bg-primary/70' : 'bg-white/15'
+                }`}
+              >
+                <div
+                  className={`h-5 w-5 rounded-full bg-white transition-transform ${
+                    config.slowMode ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </div>
+            </div>
+          </button>
         )}
 
         {/* Main Content */}
@@ -161,6 +200,12 @@ export const TimerSetup: React.FC<TimerSetupProps> = ({
                   <span className="text-on-surface-variant font-medium">Rounds</span>
                   <span className="font-mono font-bold">{config.rounds}</span>
                 </div>
+                {!isSaqMode && (
+                  <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                    <span className="text-on-surface-variant font-medium">Slow Mode</span>
+                    <span className="font-mono font-bold">{config.slowMode ? 'ON' : 'OFF'}</span>
+                  </div>
+                )}
                 <div className="flex justify-between items-center">
                   <span className="text-on-surface-variant font-medium">Work / Rest</span>
                   <span className="font-mono font-bold">
