@@ -43,7 +43,7 @@ export default {
         'outline-variant': 'rgba(255, 255, 255, 0.05)',
       },
       fontSize: {
-        'timer-huge': ['8rem', { lineHeight: '1', fontWeight: '700' }],
+        'timer-huge': ['clamp(10rem, 28vw, 16rem)', { lineHeight: '1', fontWeight: '700' }],
         'timer-large': ['6rem', { lineHeight: '1', fontWeight: '700' }],
       },
       fontFamily: {

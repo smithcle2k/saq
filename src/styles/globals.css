@@ -24,7 +24,7 @@
   --font-family-sans: 'Outfit', system-ui, sans-serif;
   --font-family-mono: 'Roboto Mono', monospace;
 
-  --font-size-timer-huge: 8rem;
+  --font-size-timer-huge: clamp(10rem, 28vw, 16rem);
   --font-size-timer-large: 6rem;
 }
 
