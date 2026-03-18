@@ -84,7 +84,7 @@ export const TimerSetup: React.FC<TimerSetupProps> = ({
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-bold tracking-[0.24em] text-primary uppercase">
-                  Slow Mode
+                  Add Break
                 </p>
               </div>
               <div
@@ -178,7 +178,7 @@ export const TimerSetup: React.FC<TimerSetupProps> = ({
                 </div>
                 {!isSaqMode && (
                   <div className="flex justify-between items-center border-b border-white/5 pb-2">
-                    <span className="text-on-surface-variant font-medium">Slow Mode</span>
+                    <span className="text-on-surface-variant font-medium">Add Break</span>
                     <span className="font-mono font-bold">{config.slowMode ? 'ON' : 'OFF'}</span>
                   </div>
                 )}

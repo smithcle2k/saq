@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { TimerConfig, TimerPhase } from '../types';
 import { buildIntervalCuePlan, IntervalCue } from '../utils/intervalCuePlan';
 import { buildSaqCuePlan } from '../utils/saqCuePlan';
+import type { SpeakOptions } from '../utils/tts';
 
 export interface TimerSnapshot {
   phase: TimerPhase;
@@ -20,7 +21,7 @@ interface UseActiveTimerEngineParams {
   config: TimerConfig;
   exercises: string[];
   onFinish: () => void;
-  onAnnounce: (message: string) => void;
+  onAnnounce: (message: string, options?: SpeakOptions) => void;
 }
 
 const createInitialSnapshot = (config: TimerConfig): TimerSnapshot => ({
@@ -156,11 +157,16 @@ export const useActiveTimerEngine = ({
     createInitialSnapshot(config)
   );
   const [isPaused, setIsPaused] = useState(false);
+  const timerSnapshotRef = useRef(timerSnapshot);
   const finishTimeoutRef = useRef<number | null>(null);
   const cueTimeoutsRef = useRef<number[]>([]);
   const cueScheduleStartedAtRef = useRef<number | null>(null);
   const elapsedCueScheduleMsRef = useRef(0);
   const { phase, timeRemaining, currentRound, currentExercise } = timerSnapshot;
+
+  useEffect(() => {
+    timerSnapshotRef.current = timerSnapshot;
+  }, [timerSnapshot]);
 
   const getRandomExercise = useCallback(() => {
     if (exercises.length === 0) return 'Move';
@@ -187,6 +193,10 @@ export const useActiveTimerEngine = ({
         .filter((cue) => cue.offsetMs > elapsedMs)
         .map((cue) =>
           window.setTimeout(() => {
+            if (timerSnapshotRef.current.phase !== TimerPhase.WORK) {
+              return;
+            }
+
             setTimerSnapshot((prev) => {
               if (prev.phase !== TimerPhase.WORK) {
                 return prev;
@@ -197,11 +207,11 @@ export const useActiveTimerEngine = ({
                 currentExercise: cue.label,
               };
             });
-            onAnnounce(cue.label);
+            onAnnounce(cue.label, { interrupt: cue.interrupt ?? true });
           }, cue.offsetMs - elapsedMs)
         );
     },
-    [clearCueTimeouts, onAnnounce]
+    [clearCueTimeouts, onAnnounce, timerSnapshotRef]
   );
 
   const startCuePlan = useCallback(

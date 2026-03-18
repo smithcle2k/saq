@@ -102,7 +102,7 @@ export const ActiveTimer: React.FC<ActiveTimerProps> = ({
     config,
     exercises,
     onFinish,
-    onAnnounce: (message) => speak(message, { interrupt: true }),
+    onAnnounce: (message, options) => speak(message, { interrupt: options?.interrupt ?? true }),
   });
 
   useEffect(() => {

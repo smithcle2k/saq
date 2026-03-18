@@ -2,6 +2,7 @@ export interface IntervalCue {
   id: number;
   label: string;
   offsetMs: number;
+  interrupt?: boolean;
 }
 
 interface IntervalCuePlan {
@@ -9,6 +10,13 @@ interface IntervalCuePlan {
   currentExercise: string;
   cuePlan: IntervalCue[];
 }
+
+const BREAK_MIN_OFFSET_MS = 300;
+const BREAK_MAX_OFFSET_MS = 2800;
+const EXERCISE_AFTER_BREAK_DELAY_MS = 300;
+
+const getRandomBreakOffsetMs = () =>
+  BREAK_MIN_OFFSET_MS + Math.round(Math.random() * (BREAK_MAX_OFFSET_MS - BREAK_MIN_OFFSET_MS));
 
 export const buildIntervalCuePlan = (exercise: string, slowMode: boolean): IntervalCuePlan => {
   if (!slowMode) {
@@ -19,12 +27,19 @@ export const buildIntervalCuePlan = (exercise: string, slowMode: boolean): Inter
     };
   }
 
+  const breakOffsetMs = getRandomBreakOffsetMs();
+
   return {
     announcement: 'Go',
     currentExercise: 'Go',
     cuePlan: [
-      { id: 1, label: 'Slow Down', offsetMs: 1000 },
-      { id: 2, label: exercise, offsetMs: 2000 },
+      { id: 1, label: 'Break', offsetMs: breakOffsetMs, interrupt: false },
+      {
+        id: 2,
+        label: exercise,
+        offsetMs: breakOffsetMs + EXERCISE_AFTER_BREAK_DELAY_MS,
+        interrupt: false,
+      },
     ],
   };
 };

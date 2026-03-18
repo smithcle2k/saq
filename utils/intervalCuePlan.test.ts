@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { buildIntervalCuePlan } from './intervalCuePlan';
 
 describe('buildIntervalCuePlan', () => {
@@ -10,14 +10,28 @@ describe('buildIntervalCuePlan', () => {
     });
   });
 
-  it('delays the route announcement when slow mode is on', () => {
+  it('queues break and the route announcement when add break is on', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0.5);
+
     expect(buildIntervalCuePlan('Shuffle Left', true)).toEqual({
       announcement: 'Go',
       currentExercise: 'Go',
       cuePlan: [
-        { id: 1, label: 'Slow Down', offsetMs: 1000 },
-        { id: 2, label: 'Shuffle Left', offsetMs: 2000 },
+        { id: 1, label: 'Break', offsetMs: 1550, interrupt: false },
+        { id: 2, label: 'Shuffle Left', offsetMs: 1850, interrupt: false },
       ],
     });
+
+    vi.restoreAllMocks();
+  });
+
+  it('randomizes the break cue from 0.3s to 2.8s after go', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    expect(buildIntervalCuePlan('Shuffle Left', true).cuePlan[0]?.offsetMs).toBe(300);
+
+    vi.spyOn(Math, 'random').mockReturnValue(1);
+    expect(buildIntervalCuePlan('Shuffle Left', true).cuePlan[0]?.offsetMs).toBe(2800);
+
+    vi.restoreAllMocks();
   });
 });

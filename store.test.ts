@@ -43,6 +43,12 @@ describe('useStore', () => {
     expect(state.modeConfigs.SAQ.workTime).toBe(3);
   });
 
+  it('should initialize interval rest to fifty-five seconds', () => {
+    const state = useStore.getState();
+
+    expect(state.modeConfigs.INTERVAL.restTime).toBe(55);
+  });
+
   it('should migrate the legacy default cues to the current defaults', async () => {
     const migrate = useStore.persist.getOptions().migrate;
     const migratedState = await migrate?.({ exercises: LEGACY_DEFAULT_CUES }, 3);

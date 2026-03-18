@@ -22,7 +22,7 @@ const sections: Section[] = [
   },
   {
     heading: 'Setting up your workout',
-    body: 'Use the − and + buttons to set your Prep, Work, Rest, and Cool Down times, as well as the number of rounds. In Interval mode, you can also toggle Slow Mode on or off. In SAQ mode, the work time is fixed at 3 seconds, but you can freely customize your rest time (minimum 15s) and the number of rounds to whatever you want.',
+    body: 'Use the − and + buttons to set your Prep, Work, Rest, and Cool Down times, as well as the number of rounds. In Interval mode, you can also turn Add Break on or off. When Add Break is on, you will hear Break and then a random exercise. In SAQ mode, the work time is fixed at 3 seconds, but you can freely customize your rest time (minimum 15s) and the number of rounds to whatever you want.',
   },
   {
     heading: 'Customizing Cues',
