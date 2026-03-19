@@ -13,7 +13,7 @@ interface IntervalCuePlan {
 
 const BREAK_MIN_OFFSET_MS = 300;
 const BREAK_MAX_OFFSET_MS = 2800;
-const EXERCISE_AFTER_BREAK_DELAY_MS = 300;
+const EXERCISE_AFTER_BREAK_DELAY_MS = 50;
 
 const getRandomBreakOffsetMs = () =>
   BREAK_MIN_OFFSET_MS + Math.round(Math.random() * (BREAK_MAX_OFFSET_MS - BREAK_MIN_OFFSET_MS));

@@ -18,7 +18,7 @@ describe('buildIntervalCuePlan', () => {
       currentExercise: 'Go',
       cuePlan: [
         { id: 1, label: 'Break', offsetMs: 1550, interrupt: false },
-        { id: 2, label: 'Shuffle Left', offsetMs: 1850, interrupt: false },
+        { id: 2, label: 'Shuffle Left', offsetMs: 1600, interrupt: false },
       ],
     });
 
