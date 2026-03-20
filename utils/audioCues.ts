@@ -1,5 +1,9 @@
 export type AudioCueName = 'beep' | 'whistle' | 'buzzer';
 
+interface InitializeAudioCueOptions {
+  force?: boolean;
+}
+
 const AUDIO_CUE_SOURCES: Record<AudioCueName, string> = {
   beep: '/beep.wav',
   whistle: '/whistle.wav',
@@ -35,14 +39,14 @@ const resetAudioCueElement = (audio: HTMLAudioElement) => {
   }
 };
 
-export const initializeAudioCues = () => {
+export const initializeAudioCues = (options: InitializeAudioCueOptions = {}) => {
   if (!canUseAudio()) return;
 
   const audioElements = Object.keys(AUDIO_CUE_SOURCES).map((name) =>
     getAudioCueElement(name as AudioCueName)
   );
 
-  if (hasPrimedAudioCues) {
+  if (hasPrimedAudioCues && !options.force) {
     return;
   }
 

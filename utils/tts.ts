@@ -15,6 +15,10 @@ export interface SpeakOptions {
   afterPreviousEndMs?: number;
 }
 
+interface InitializeSpeechOptions {
+  force?: boolean;
+}
+
 const selectPreferredVoice = () => {
   const voices = window.speechSynthesis.getVoices();
   const prioritized = voices.find(
@@ -118,6 +122,8 @@ const processSpeechQueue = (afterPreviousUtteranceEnded = false) => {
 
 const speakNow = (text: string, interrupt: boolean, afterPreviousEndMs: number) => {
   const synth = window.speechSynthesis;
+  synth.resume();
+
   if (interrupt) {
     const hasQueuedSpeech = queuedSpeech.length > 0 || delayedSpeechStartTimeoutId !== null;
     const hasActiveSpeech = activeUtterance !== null || synth.speaking || synth.pending;
@@ -135,14 +141,16 @@ const speakNow = (text: string, interrupt: boolean, afterPreviousEndMs: number) 
   processSpeechQueue();
 };
 
-export const initializeSpeech = () => {
+export const initializeSpeech = (options: InitializeSpeechOptions = {}) => {
   if (!isSpeechSupported()) return;
   void loadVoices();
 
-  if (hasPrimedSpeech) return;
+  if (hasPrimedSpeech && !options.force) return;
   hasPrimedSpeech = true;
 
   // Prime speech synthesis from a user gesture (required in some browsers).
+  window.speechSynthesis.cancel();
+  window.speechSynthesis.resume();
   const silent = new SpeechSynthesisUtterance(' ');
   silent.volume = 0;
   window.speechSynthesis.speak(silent);
@@ -156,7 +164,6 @@ export const speak = (text: string, options: SpeakOptions = {}) => {
   const interrupt = options.interrupt ?? true;
   const afterPreviousEndMs = options.afterPreviousEndMs ?? 0;
 
-  void loadVoices().then(() => {
-    speakNow(message, interrupt, afterPreviousEndMs);
-  });
+  void loadVoices();
+  speakNow(message, interrupt, afterPreviousEndMs);
 };

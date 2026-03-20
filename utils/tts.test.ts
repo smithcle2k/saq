@@ -27,6 +27,7 @@ const installSpeechMocks = () => {
   const speechSynthesis = {
     speaking: false,
     pending: false,
+    paused: false,
     getVoices: vi.fn(() => [{ lang: 'en-US', name: 'Google US English' } as SpeechSynthesisVoice]),
     addEventListener: vi.fn(),
     removeEventListener: vi.fn(),
@@ -39,6 +40,9 @@ const installSpeechMocks = () => {
       currentUtterance = null;
       speechSynthesis.speaking = false;
       speechSynthesis.pending = false;
+    }),
+    resume: vi.fn(() => {
+      speechSynthesis.paused = false;
     }),
   };
 

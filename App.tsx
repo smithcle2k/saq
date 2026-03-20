@@ -62,19 +62,22 @@ function App() {
 
   // Unlock speech synthesis on the first user interaction.
   useEffect(() => {
-    const unlockSpeech = () => {
-      initializeSpeech();
-      initializeAudioCues();
-      window.removeEventListener('pointerdown', unlockSpeech);
-      window.removeEventListener('touchstart', unlockSpeech);
+    const unlockMedia = () => {
+      initializeSpeech({ force: true });
+      initializeAudioCues({ force: true });
+      window.removeEventListener('click', unlockMedia);
+      window.removeEventListener('touchend', unlockMedia);
+      window.removeEventListener('keydown', unlockMedia);
     };
 
-    window.addEventListener('pointerdown', unlockSpeech, { passive: true });
-    window.addEventListener('touchstart', unlockSpeech, { passive: true });
+    window.addEventListener('click', unlockMedia, { passive: true });
+    window.addEventListener('touchend', unlockMedia, { passive: true });
+    window.addEventListener('keydown', unlockMedia);
 
     return () => {
-      window.removeEventListener('pointerdown', unlockSpeech);
-      window.removeEventListener('touchstart', unlockSpeech);
+      window.removeEventListener('click', unlockMedia);
+      window.removeEventListener('touchend', unlockMedia);
+      window.removeEventListener('keydown', unlockMedia);
     };
   }, []);
 
@@ -83,8 +86,8 @@ function App() {
   };
 
   const handleStart = () => {
-    initializeSpeech();
-    initializeAudioCues();
+    initializeSpeech({ force: true });
+    initializeAudioCues({ force: true });
     setView('TIMER');
   };
 
