@@ -3,6 +3,7 @@ export interface IntervalCue {
   label: string;
   offsetMs: number;
   interrupt?: boolean;
+  afterPreviousEndMs?: number;
 }
 
 interface IntervalCuePlan {
@@ -39,6 +40,7 @@ export const buildIntervalCuePlan = (exercise: string, slowMode: boolean): Inter
         label: exercise,
         offsetMs: breakOffsetMs + EXERCISE_AFTER_BREAK_DELAY_MS,
         interrupt: false,
+        afterPreviousEndMs: EXERCISE_AFTER_BREAK_DELAY_MS,
       },
     ],
   };

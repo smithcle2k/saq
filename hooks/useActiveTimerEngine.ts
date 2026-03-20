@@ -207,7 +207,10 @@ export const useActiveTimerEngine = ({
                 currentExercise: cue.label,
               };
             });
-            onAnnounce(cue.label, { interrupt: cue.interrupt ?? true });
+            onAnnounce(cue.label, {
+              interrupt: cue.interrupt ?? true,
+              afterPreviousEndMs: cue.afterPreviousEndMs,
+            });
           }, cue.offsetMs - elapsedMs)
         );
     },

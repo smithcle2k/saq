@@ -6,9 +6,13 @@ const isSpeechSupported = () =>
 let voicesReadyPromise: Promise<void> | null = null;
 let preferredVoice: SpeechSynthesisVoice | undefined;
 let hasPrimedSpeech = false;
+let activeUtterance: SpeechSynthesisUtterance | null = null;
+let queuedSpeech: Array<{ text: string; afterPreviousEndMs: number }> = [];
+let delayedSpeechStartTimeoutId: number | null = null;
 
 export interface SpeakOptions {
   interrupt?: boolean;
+  afterPreviousEndMs?: number;
 }
 
 const selectPreferredVoice = () => {
@@ -57,12 +61,14 @@ const loadVoices = () => {
   return voicesReadyPromise;
 };
 
-const speakNow = (text: string, interrupt: boolean) => {
-  const synth = window.speechSynthesis;
-  if (interrupt && (synth.speaking || synth.pending)) {
-    synth.cancel();
+const clearDelayedSpeechStart = () => {
+  if (delayedSpeechStartTimeoutId !== null) {
+    window.clearTimeout(delayedSpeechStartTimeoutId);
+    delayedSpeechStartTimeoutId = null;
   }
+};
 
+const createUtterance = (text: string, onDone: () => void) => {
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.rate = 1;
   utterance.pitch = 1;
@@ -71,8 +77,56 @@ const speakNow = (text: string, interrupt: boolean) => {
   if (preferredVoice) {
     utterance.voice = preferredVoice;
   }
+  utterance.onend = onDone;
+  utterance.onerror = onDone;
 
-  synth.speak(utterance);
+  return utterance;
+};
+
+const processSpeechQueue = (afterPreviousUtteranceEnded = false) => {
+  if (!isSpeechSupported()) return;
+  if (activeUtterance || delayedSpeechStartTimeoutId !== null || queuedSpeech.length === 0) return;
+
+  const synth = window.speechSynthesis;
+  const nextSpeech = queuedSpeech.shift();
+  if (!nextSpeech) return;
+
+  const speakQueuedUtterance = () => {
+    delayedSpeechStartTimeoutId = null;
+
+    const utterance = createUtterance(nextSpeech.text, () => {
+      if (activeUtterance === utterance) {
+        activeUtterance = null;
+      }
+      processSpeechQueue(true);
+    });
+
+    activeUtterance = utterance;
+    synth.speak(utterance);
+  };
+
+  if (afterPreviousUtteranceEnded && nextSpeech.afterPreviousEndMs > 0) {
+    delayedSpeechStartTimeoutId = window.setTimeout(
+      speakQueuedUtterance,
+      nextSpeech.afterPreviousEndMs
+    );
+    return;
+  }
+
+  speakQueuedUtterance();
+};
+
+const speakNow = (text: string, interrupt: boolean, afterPreviousEndMs: number) => {
+  const synth = window.speechSynthesis;
+  if (interrupt) {
+    clearDelayedSpeechStart();
+    queuedSpeech = [];
+    activeUtterance = null;
+    synth.cancel();
+  }
+
+  queuedSpeech.push({ text, afterPreviousEndMs });
+  processSpeechQueue();
 };
 
 export const initializeSpeech = () => {
@@ -94,8 +148,9 @@ export const speak = (text: string, options: SpeakOptions = {}) => {
 
   const message = text.trim();
   const interrupt = options.interrupt ?? true;
+  const afterPreviousEndMs = options.afterPreviousEndMs ?? 0;
 
   void loadVoices().then(() => {
-    speakNow(message, interrupt);
+    speakNow(message, interrupt, afterPreviousEndMs);
   });
 };
