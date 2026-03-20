@@ -5,9 +5,9 @@ import { TimerConfig, TimerPhase } from '../types';
 import { formatTime } from '../utils/timeUtils';
 import { shouldAnnounceRestFiveSeconds, shouldPlayCountdownBeep } from '../utils/timerAlerts';
 import { speak } from '../utils/tts';
+import { playAudioCue } from '../utils/audioCues';
 import { useActiveTimerEngine } from '../hooks/useActiveTimerEngine';
 import { useWakeLock } from '../hooks/useWakeLock';
-import useSound from 'use-sound';
 
 interface ActiveTimerProps {
   config: TimerConfig;
@@ -91,19 +91,20 @@ export const ActiveTimer: React.FC<ActiveTimerProps> = ({
   // Keep screen awake while timer is active
   useWakeLock();
 
-  const [playBeep] = useSound('/beep.wav', { volume: 0.5 });
-  const [playWhistle] = useSound('/whistle.wav', { volume: 0.8 });
-  const [playBuzzer] = useSound('/buzzer.wav', { volume: 0.8 });
-
   const hasAnnouncedPrepRef = useRef(false);
   const hasAnnouncedRestFiveSecondsRef = useRef(false);
   const prevPhaseRef = useRef<TimerPhase | null>(null);
-  const { phase, timeRemaining, currentRound, isPaused, togglePause } = useActiveTimerEngine({
-    config,
-    exercises,
-    onFinish,
-    onAnnounce: (message, options) => speak(message, { interrupt: options?.interrupt ?? true }),
-  });
+  const { phase, timeRemaining, currentRound, currentExercise, isPaused, togglePause } =
+    useActiveTimerEngine({
+      config,
+      exercises,
+      onFinish,
+      onAnnounce: (message, options) =>
+        speak(message, {
+          interrupt: options?.interrupt ?? true,
+          afterPreviousEndMs: options?.afterPreviousEndMs ?? 0,
+        }),
+    });
 
   useEffect(() => {
     if (hasAnnouncedPrepRef.current) return;
@@ -114,9 +115,9 @@ export const ActiveTimer: React.FC<ActiveTimerProps> = ({
   // Synchronized countdown beeps
   useEffect(() => {
     if (shouldPlayCountdownBeep(phase, timeRemaining, isPaused)) {
-      playBeep();
+      playAudioCue('beep');
     }
-  }, [timeRemaining, phase, isPaused, playBeep]);
+  }, [timeRemaining, phase, isPaused]);
 
   useEffect(() => {
     if (phase !== TimerPhase.REST) {
@@ -143,13 +144,13 @@ export const ActiveTimer: React.FC<ActiveTimerProps> = ({
 
     if (prevPhaseRef.current && prevPhaseRef.current !== phase) {
       if (phase === TimerPhase.WORK) {
-        playWhistle();
+        playAudioCue('whistle');
       } else if (phase === TimerPhase.REST || phase === TimerPhase.COOL_DOWN) {
-        playBuzzer();
+        playAudioCue('buzzer');
       }
     }
     prevPhaseRef.current = phase;
-  }, [phase, isPaused, playWhistle, playBuzzer]);
+  }, [phase, isPaused]);
 
   const currentPhaseConfig = phaseConfig[phase];
   const isCountdown = timeRemaining <= 3 && timeRemaining > 0;
@@ -257,6 +258,19 @@ export const ActiveTimer: React.FC<ActiveTimerProps> = ({
 
             {/* Exercise Display for Work Phase */}
             <AnimatePresence mode="wait">
+              {phase === TimerPhase.WORK && (
+                <motion.div
+                  key={currentExercise || 'work'}
+                  className="mt-6 text-title-large font-bold tracking-wide"
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -12 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  {currentExercise || 'Move'}
+                </motion.div>
+              )}
+
               {phase === TimerPhase.PREP && (
                 <div className="mt-6 text-lg font-medium opacity-70">Get ready</div>
               )}

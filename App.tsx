@@ -8,6 +8,7 @@ import { Statistics } from './components/Statistics';
 import { Tutorial } from './components/Tutorial';
 import { calculateTotalTime } from './utils/timeUtils';
 import { initializeSpeech } from './utils/tts';
+import { initializeAudioCues } from './utils/audioCues';
 import { useStore } from './store';
 
 // Page transition variants
@@ -63,6 +64,7 @@ function App() {
   useEffect(() => {
     const unlockSpeech = () => {
       initializeSpeech();
+      initializeAudioCues();
       window.removeEventListener('pointerdown', unlockSpeech);
       window.removeEventListener('touchstart', unlockSpeech);
     };
@@ -82,6 +84,7 @@ function App() {
 
   const handleStart = () => {
     initializeSpeech();
+    initializeAudioCues();
     setView('TIMER');
   };
 
