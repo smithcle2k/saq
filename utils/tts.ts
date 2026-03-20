@@ -119,10 +119,16 @@ const processSpeechQueue = (afterPreviousUtteranceEnded = false) => {
 const speakNow = (text: string, interrupt: boolean, afterPreviousEndMs: number) => {
   const synth = window.speechSynthesis;
   if (interrupt) {
+    const hasQueuedSpeech = queuedSpeech.length > 0 || delayedSpeechStartTimeoutId !== null;
+    const hasActiveSpeech = activeUtterance !== null || synth.speaking || synth.pending;
+
     clearDelayedSpeechStart();
     queuedSpeech = [];
     activeUtterance = null;
-    synth.cancel();
+
+    if (hasQueuedSpeech || hasActiveSpeech) {
+      synth.cancel();
+    }
   }
 
   queuedSpeech.push({ text, afterPreviousEndMs });

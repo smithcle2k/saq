@@ -99,4 +99,17 @@ describe('speak', () => {
     vi.advanceTimersByTime(1);
     expect(spokenUtterances.map((utterance) => utterance.text)).toEqual(['Break', 'Shuffle Left']);
   });
+
+  it('does not cancel speech synthesis before the first interrupting utterance when idle', async () => {
+    const { speechSynthesis, spokenUtterances } = installSpeechMocks();
+
+    vi.resetModules();
+    const { speak } = await import('./tts');
+
+    speak('Get ready');
+    await flushMicrotasks();
+
+    expect(speechSynthesis.cancel).not.toHaveBeenCalled();
+    expect(spokenUtterances.map((utterance) => utterance.text)).toEqual(['Get ready']);
+  });
 });
