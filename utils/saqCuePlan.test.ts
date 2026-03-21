@@ -6,17 +6,21 @@ describe('buildSaqCuePlan', () => {
     vi.restoreAllMocks();
   });
 
-  it('creates three cues at the start of each second in a SAQ work window', () => {
+  it('creates five cues at the start of each second in a SAQ work window', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0.5);
 
     const cuePlan = buildSaqCuePlan(['Left', 'Right', 'Back']);
 
-    expect(cuePlan).toHaveLength(3);
-    expect(cuePlan.map((cue) => cue.offsetMs)).toEqual([0, 1000, 2000]);
+    expect(cuePlan).toHaveLength(5);
+    expect(cuePlan.map((cue) => cue.offsetMs)).toEqual([0, 1000, 2000, 3000, 4000]);
     expect(cuePlan[0].offsetMs).toBeLessThan(cuePlan[1].offsetMs);
     expect(cuePlan[1].offsetMs).toBeLessThan(cuePlan[2].offsetMs);
+    expect(cuePlan[2].offsetMs).toBeLessThan(cuePlan[3].offsetMs);
+    expect(cuePlan[3].offsetMs).toBeLessThan(cuePlan[4].offsetMs);
     expect(cuePlan[0].label).not.toBe(cuePlan[1].label);
     expect(cuePlan[1].label).not.toBe(cuePlan[2].label);
+    expect(cuePlan[2].label).not.toBe(cuePlan[3].label);
+    expect(cuePlan[3].label).not.toBe(cuePlan[4].label);
   });
 
   it('falls back to default cues when no custom exercise list exists', () => {
@@ -24,7 +28,7 @@ describe('buildSaqCuePlan', () => {
 
     const cuePlan = buildSaqCuePlan([]);
 
-    expect(cuePlan).toHaveLength(3);
+    expect(cuePlan).toHaveLength(5);
     expect(cuePlan[0].label).toBe('Left');
   });
 
@@ -33,7 +37,7 @@ describe('buildSaqCuePlan', () => {
 
     const cuePlan = buildSaqCuePlan(['Straight', 'Left', 'Right', 'Come Back']);
 
-    expect(cuePlan).toHaveLength(3);
+    expect(cuePlan).toHaveLength(5);
     expect(cuePlan.every((cue) => cue.label !== 'Straight')).toBe(true);
   });
 
@@ -42,7 +46,7 @@ describe('buildSaqCuePlan', () => {
 
     const cuePlan = buildSaqCuePlan(['Left', 'Right', 'Come Back']);
 
-    expect(cuePlan).toHaveLength(3);
+    expect(cuePlan).toHaveLength(5);
     expect(cuePlan.every((cue) => cue.label !== 'Straight')).toBe(true);
   });
 });

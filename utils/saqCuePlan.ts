@@ -25,7 +25,7 @@ const getCuePool = (exercises: string[]) => {
 
 export const buildSaqCuePlan = (exercises: string[]): SaqCue[] => {
   const cuePool = getCuePool(exercises);
-  const offsets = [0, 1000, 2000];
+  const offsets = [0, 1000, 2000, 3000, 4000];
 
   let previousCue = '';
   return offsets.map((offsetMs, index) => {

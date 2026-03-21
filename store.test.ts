@@ -37,10 +37,10 @@ describe('useStore', () => {
     expect(state.modeConfigs.SAQ.slowMode).toBe(false);
   });
 
-  it('should initialize SAQ work to three seconds', () => {
+  it('should initialize SAQ work to five seconds', () => {
     const state = useStore.getState();
 
-    expect(state.modeConfigs.SAQ.workTime).toBe(3);
+    expect(state.modeConfigs.SAQ.workTime).toBe(5);
   });
 
   it('should initialize interval rest to fifty-five seconds', () => {
@@ -77,7 +77,7 @@ describe('useStore', () => {
 
     expect(migratedState?.modeConfigs.INTERVAL.slowMode).toBe(true);
     expect(migratedState?.modeConfigs.SAQ.slowMode).toBe(false);
-    expect(migratedState?.modeConfigs.SAQ.workTime).toBe(3);
+    expect(migratedState?.modeConfigs.SAQ.workTime).toBe(5);
   });
 
   it('should add item to history', () => {
