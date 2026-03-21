@@ -1,0 +1,45 @@
+export const colors = {
+  surface: '#030305',
+  surfaceDim: '#000000',
+  surfaceBright: '#0c0c14',
+  surfaceCard: 'rgba(255,255,255,0.04)',
+  surfaceCardStrong: 'rgba(255,255,255,0.08)',
+  outline: 'rgba(255,255,255,0.08)',
+  outlineStrong: 'rgba(255,255,255,0.14)',
+  primary: '#00f0ff',
+  onSurface: '#ffffff',
+  onSurfaceVariant: '#94a3b8',
+  prep: '#f59e0b',
+  prepDark: '#9a3412',
+  work: '#22c55e',
+  workDark: '#047857',
+  rest: '#ef4444',
+  restDark: '#be123c',
+  cooldown: '#3b82f6',
+  cooldownDark: '#312e81',
+  finished: '#d946ef',
+  finishedDark: '#701a75',
+  danger: '#f43f5e',
+  shadow: '#000000',
+} as const;
+
+export const gradients = {
+  app: ['#151525', '#030305'] as const,
+  prep: ['#f59e0b', '#ea580c', '#9a3412'] as const,
+  work: ['#22c55e', '#10b981', '#047857'] as const,
+  rest: ['#ef4444', '#e11d48', '#be123c'] as const,
+  cooldown: ['#3b82f6', '#4f46e5', '#312e81'] as const,
+  finished: ['#a855f7', '#d946ef', '#701a75'] as const,
+} as const;
+
+export const fonts = {
+  sansRegular: 'Outfit_400Regular',
+  sansMedium: 'Outfit_500Medium',
+  sansSemiBold: 'Outfit_600SemiBold',
+  sansBold: 'Outfit_700Bold',
+  sansExtraBold: 'Outfit_800ExtraBold',
+  sansBlack: 'Outfit_900Black',
+  monoRegular: 'RobotoMono_400Regular',
+  monoMedium: 'RobotoMono_500Medium',
+  monoBold: 'RobotoMono_700Bold',
+} as const;

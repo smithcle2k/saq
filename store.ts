@@ -1,6 +1,6 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
-import { persist, createJSONStorage, StateStorage } from 'zustand/middleware';
-import { get, set, del } from 'idb-keyval';
+import { createJSONStorage, persist } from 'zustand/middleware';
 import { TimerConfig, TimerMode, WorkoutHistoryItem } from './types';
 import {
   DEFAULT_CUES,
@@ -8,19 +8,6 @@ import {
   PREVIOUS_DEFAULT_CUES,
   matchesCueList,
 } from './utils/defaultCues';
-
-// IndexedDB storage for Zustand to prevent UI freezes on large payloads
-const idbStorage: StateStorage = {
-  getItem: async (name: string): Promise<string | null> => {
-    return (await get(name)) || null;
-  },
-  setItem: async (name: string, value: string): Promise<void> => {
-    await set(name, value);
-  },
-  removeItem: async (name: string): Promise<void> => {
-    await del(name);
-  },
-};
 
 type ModeConfigMap = Record<TimerMode, Omit<TimerConfig, 'mode'>>;
 
@@ -124,7 +111,7 @@ export const useStore = create<AppState>()(
     {
       name: 'interval-trainer-storage',
       version: 8,
-      storage: createJSONStorage(() => idbStorage),
+      storage: createJSONStorage(() => AsyncStorage),
       migrate: (persistedState: unknown, version) => {
         const state = (persistedState ?? {}) as PersistedAppState;
         const modeConfigs = state.modeConfigs ?? {};

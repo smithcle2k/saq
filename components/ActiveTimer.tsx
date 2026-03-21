@@ -1,11 +1,14 @@
-import React, { useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Pause, Play, X } from 'lucide-react';
+import React, { useEffect, useMemo, useRef } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { TimerConfig, TimerPhase } from '../types';
+import { colors, fonts, gradients } from '../theme';
 import { formatTime } from '../utils/timeUtils';
 import { shouldAnnounceRestFiveSeconds, shouldPlayCountdownBeep } from '../utils/timerAlerts';
-import { speak } from '../utils/tts';
-import { playAudioCue } from '../utils/audioCues';
+import { speak, stopSpeech } from '../utils/tts';
+import { AudioCueName } from '../utils/audioCues';
 import { useActiveTimerEngine } from '../hooks/useActiveTimerEngine';
 import { useWakeLock } from '../hooks/useWakeLock';
 
@@ -14,33 +17,35 @@ interface ActiveTimerProps {
   exercises: string[];
   onFinish: () => void;
   onExit: () => void;
+  playAudioCue: (name: AudioCueName) => void;
+  stopAudioCues: () => void;
 }
 
 // Phase configuration
 const phaseConfig = {
   [TimerPhase.PREP]: {
-    bgClass: 'phase-gradient-prep',
-    ringColor: '#f59e0b',
+    colors: gradients.prep,
+    ringColor: colors.prep,
     label: 'PREP',
   },
   [TimerPhase.WORK]: {
-    bgClass: 'phase-gradient-work',
-    ringColor: '#22c55e',
+    colors: gradients.work,
+    ringColor: colors.work,
     label: 'WORK',
   },
   [TimerPhase.REST]: {
-    bgClass: 'phase-gradient-rest',
-    ringColor: '#ef4444',
+    colors: gradients.rest,
+    ringColor: colors.rest,
     label: 'REST',
   },
   [TimerPhase.COOL_DOWN]: {
-    bgClass: 'phase-gradient-cooldown',
-    ringColor: '#3b82f6',
+    colors: gradients.cooldown,
+    ringColor: colors.cooldown,
     label: 'COOL DOWN',
   },
   [TimerPhase.FINISHED]: {
-    bgClass: 'phase-gradient-finished',
-    ringColor: '#a855f7',
+    colors: gradients.finished,
+    ringColor: colors.finished,
     label: 'DONE',
   },
 };
@@ -52,31 +57,24 @@ interface RoundDotsProps {
 }
 
 const RoundDots: React.FC<RoundDotsProps> = ({ currentRound, totalRounds }) => {
-  // Limit displayed dots to 12, show ellipsis for more
   const maxDots = 12;
   const showDots = Math.min(totalRounds, maxDots);
 
   return (
-    <div className="flex items-center justify-center gap-2 mt-4">
+    <View style={styles.roundDots}>
       {Array.from({ length: showDots }, (_, i) => (
-        <motion.div
+        <View
           key={i}
-          className={`w-3 h-3 rounded-full transition-all duration-300 ${
-            i < currentRound
-              ? 'bg-white'
-              : i === currentRound - 1
-                ? 'bg-white shadow-lg'
-                : 'bg-white/30'
-          }`}
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ delay: i * 0.05, type: 'spring', stiffness: 400 }}
+          style={[
+            styles.roundDot,
+            i < currentRound ? styles.roundDotComplete : styles.roundDotPending,
+          ]}
         />
       ))}
-      {totalRounds > maxDots && (
-        <span className="text-white/60 text-sm ml-1">+{totalRounds - maxDots}</span>
-      )}
-    </div>
+      {totalRounds > maxDots ? (
+        <Text style={styles.roundOverflow}>+{totalRounds - maxDots}</Text>
+      ) : null}
+    </View>
   );
 };
 
@@ -85,10 +83,10 @@ export const ActiveTimer: React.FC<ActiveTimerProps> = ({
   exercises,
   onFinish,
   onExit,
+  playAudioCue,
+  stopAudioCues,
 }) => {
   const isSaqMode = config.mode === 'SAQ';
-
-  // Keep screen awake while timer is active
   useWakeLock();
 
   const hasAnnouncedPrepRef = useRef(false);
@@ -117,7 +115,7 @@ export const ActiveTimer: React.FC<ActiveTimerProps> = ({
     if (shouldPlayCountdownBeep(phase, timeRemaining, isPaused)) {
       playAudioCue('beep');
     }
-  }, [timeRemaining, phase, isPaused]);
+  }, [timeRemaining, phase, isPaused, playAudioCue]);
 
   useEffect(() => {
     if (phase !== TimerPhase.REST) {
@@ -150,164 +148,264 @@ export const ActiveTimer: React.FC<ActiveTimerProps> = ({
       }
     }
     prevPhaseRef.current = phase;
-  }, [phase, isPaused]);
+  }, [phase, isPaused, playAudioCue]);
 
   const currentPhaseConfig = phaseConfig[phase];
   const isCountdown = timeRemaining <= 3 && timeRemaining > 0;
+  const helperText = useMemo(() => {
+    if (phase === TimerPhase.PREP) return 'Get ready';
+    if (phase === TimerPhase.REST) return isSaqMode ? 'Reset and reload' : 'Breathe';
+    if (phase === TimerPhase.COOL_DOWN) return 'Stretch it out';
+    return '';
+  }, [isSaqMode, phase]);
+
+  useEffect(() => {
+    return () => {
+      stopAudioCues();
+      void stopSpeech();
+    };
+  }, [stopAudioCues]);
+
+  const handleExit = () => {
+    stopAudioCues();
+    void stopSpeech();
+    onExit();
+  };
 
   return (
-    <motion.div
-      className={`flex flex-col h-full ${currentPhaseConfig.bgClass} relative overflow-hidden`}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
-    >
-      {/* Animated background glow */}
-      <div className="absolute inset-0 overflow-hidden">
-        <motion.div
-          className="absolute top-1/2 left-1/2 w-150 h-150 rounded-full opacity-30 blur-3xl"
-          style={{
-            background: `radial-gradient(circle, ${currentPhaseConfig.ringColor}60 0%, transparent 70%)`,
-            transform: 'translate(-50%, -50%)',
-          }}
-          animate={{ scale: [1, 1.1, 1] }}
-          transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-        />
-      </div>
+    <LinearGradient colors={currentPhaseConfig.colors} style={styles.gradient}>
+      <SafeAreaView style={styles.safeArea}>
+        <View style={[styles.glow, { backgroundColor: `${currentPhaseConfig.ringColor}55` }]} />
 
-      {/* Premium Pause Overlay */}
-      <AnimatePresence>
-        {isPaused && phase !== TimerPhase.FINISHED && (
-          <motion.div
-            className="absolute inset-0 z-50 flex flex-col items-center justify-center"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-          >
-            {/* Frosted glass background */}
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-3xl" />
+        <Modal transparent visible={isPaused && phase !== TimerPhase.FINISHED} animationType="fade">
+          <View style={styles.pauseOverlay}>
+            <View style={styles.pauseCard}>
+              <Text style={styles.pauseLabel}>Paused</Text>
+              <Pressable onPress={togglePause} style={styles.resumeButton}>
+                <Ionicons name="play" size={28} color={colors.surface} />
+                <Text style={styles.resumeText}>RESUME</Text>
+              </Pressable>
+            </View>
+          </View>
+        </Modal>
 
-            <motion.div
-              className="relative z-10 flex flex-col items-center"
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-            >
-              <div className="text-white/60 text-lg font-bold uppercase tracking-[0.2em] mb-8">
-                Paused
-              </div>
-              <button
-                onClick={togglePause}
-                className="flex items-center gap-3 bg-white text-black px-10 py-5 rounded-full font-bold text-lg hover:scale-105 active:scale-95 transition-all shadow-[0_0_40px_rgba(255,255,255,0.3)]"
-                aria-label="Resume Workout"
-              >
-                <Play size={28} fill="currentColor" />
-                RESUME
-              </button>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+        <View style={styles.topBar}>
+          <Pressable onPress={handleExit} style={styles.topButton}>
+            <Ionicons name="close" size={24} color={colors.onSurface} />
+          </Pressable>
+          <Text style={styles.phaseLabel}>
+            {currentPhaseConfig.label}
+            {isSaqMode && phase !== TimerPhase.FINISHED ? ' • SAQ' : ''}
+          </Text>
+          <View style={styles.roundBadge}>
+            <Text style={styles.roundBadgeText}>
+              {currentRound}/{config.rounds}
+            </Text>
+          </View>
+        </View>
 
-      {/* Top Bar */}
-      <div className="flex justify-between items-center p-4 text-white relative z-10">
-        <motion.button
-          onClick={onExit}
-          className="p-3 bg-white/10 backdrop-blur-sm rounded-full hover:bg-white/20 transition-colors"
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-        >
-          <X size={24} />
-        </motion.button>
-        <div className="text-lg font-semibold tracking-wide">
-          {currentPhaseConfig.label} {isSaqMode && phase !== TimerPhase.FINISHED ? '• SAQ' : ''}
-        </div>
-        <div className="text-sm font-mono opacity-80 bg-white/10 px-3 py-1 rounded-full">
-          {currentRound}/{config.rounds}
-        </div>
-      </div>
-
-      {/* Main Display */}
-      <div className="flex-1 flex flex-col justify-center items-center text-white text-center p-4 relative z-10">
-        {phase === TimerPhase.FINISHED ? (
-          <motion.div
-            initial={{ scale: 0.5, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: 'spring', stiffness: 200, damping: 15 }}
-          >
-            <h1 className="text-display-large font-black">GREAT JOB!</h1>
-            <p className="text-title-large mt-4 opacity-80">Workout Complete</p>
-          </motion.div>
-        ) : (
-          <>
-            {/* Timer */}
-            <div className="relative flex items-center justify-center">
-              <motion.div
-                className={`text-timer-huge font-bold font-mono tracking-tighter drop-shadow-[0_0_30px_rgba(255,255,255,0.4)] ${
-                  isCountdown ? 'text-white' : ''
-                }`}
-                animate={isCountdown ? { scale: [1, 1.1, 1] } : {}}
-                transition={{ duration: 0.5 }}
-                key={isCountdown ? timeRemaining : 'normal'}
-              >
+        <View style={styles.main}>
+          {phase === TimerPhase.FINISHED ? (
+            <View style={styles.finishWrap}>
+              <Text style={styles.finishTitle}>GREAT JOB!</Text>
+              <Text style={styles.finishSubtitle}>Workout Complete</Text>
+            </View>
+          ) : (
+            <>
+              <Text style={[styles.timerText, isCountdown && styles.timerCountdown]}>
                 {formatTime(timeRemaining)}
-              </motion.div>
-            </div>
+              </Text>
 
-            {/* Exercise Display for Work Phase */}
-            <AnimatePresence mode="wait">
-              {phase === TimerPhase.WORK && (
-                <motion.div
-                  key={currentExercise || 'work'}
-                  className="mt-6 text-title-large font-bold tracking-wide"
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -12 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  {currentExercise || 'Move'}
-                </motion.div>
+              {phase === TimerPhase.WORK ? (
+                <Text style={styles.exerciseText}>{currentExercise || 'Move'}</Text>
+              ) : (
+                <Text style={styles.helperText}>{helperText}</Text>
               )}
 
-              {phase === TimerPhase.PREP && (
-                <div className="mt-6 text-lg font-medium opacity-70">Get ready</div>
-              )}
+              <RoundDots currentRound={currentRound} totalRounds={config.rounds} />
+            </>
+          )}
+        </View>
 
-              {phase === TimerPhase.REST && (
-                <div className="mt-6 text-lg font-medium opacity-70">
-                  {isSaqMode ? 'Reset and reload' : 'Breathe'}
-                </div>
-              )}
-
-              {phase === TimerPhase.COOL_DOWN && (
-                <div className="mt-6 text-lg font-medium opacity-70">Stretch it out</div>
-              )}
-            </AnimatePresence>
-
-            {/* Round Progress Dots */}
-            <RoundDots currentRound={currentRound} totalRounds={config.rounds} />
-          </>
-        )}
-      </div>
-
-      {/* Controls */}
-      {phase !== TimerPhase.FINISHED && (
-        <div className="h-25 bg-black/20 flex items-center justify-center pb-safe relative z-10">
-          <button
-            onClick={togglePause}
-            className="w-14 h-14 bg-white rounded-full flex items-center justify-center text-surface active:opacity-80"
-            aria-label={isPaused ? 'Resume Timer' : 'Pause Timer'}
-          >
-            {isPaused ? (
-              <Play size={28} fill="currentColor" />
-            ) : (
-              <Pause size={28} fill="currentColor" />
-            )}
-          </button>
-        </div>
-      )}
-    </motion.div>
+        {phase !== TimerPhase.FINISHED ? (
+          <View style={styles.controls}>
+            <Pressable
+              onPress={togglePause}
+              style={styles.pauseButton}
+              accessibilityLabel={isPaused ? 'Resume Timer' : 'Pause Timer'}
+            >
+              <Ionicons name={isPaused ? 'play' : 'pause'} size={28} color={colors.surface} />
+            </Pressable>
+          </View>
+        ) : null}
+      </SafeAreaView>
+    </LinearGradient>
   );
 };
+
+const styles = StyleSheet.create({
+  gradient: {
+    flex: 1,
+  },
+  safeArea: {
+    flex: 1,
+  },
+  glow: {
+    position: 'absolute',
+    top: '24%',
+    left: '50%',
+    height: 320,
+    width: 320,
+    marginLeft: -160,
+    marginTop: -160,
+    borderRadius: 999,
+    opacity: 0.28,
+  },
+  pauseOverlay: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.6)',
+  },
+  pauseCard: {
+    alignItems: 'center',
+    gap: 24,
+  },
+  pauseLabel: {
+    color: 'rgba(255,255,255,0.7)',
+    fontFamily: fonts.sansBold,
+    fontSize: 20,
+    letterSpacing: 3,
+    textTransform: 'uppercase',
+  },
+  resumeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderRadius: 999,
+    backgroundColor: colors.onSurface,
+    paddingHorizontal: 32,
+    paddingVertical: 18,
+  },
+  resumeText: {
+    color: colors.surface,
+    fontFamily: fonts.sansBold,
+    fontSize: 18,
+  },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 8,
+  },
+  topButton: {
+    height: 48,
+    width: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+  },
+  phaseLabel: {
+    flex: 1,
+    color: colors.onSurface,
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 18,
+    letterSpacing: 0.8,
+    textAlign: 'center',
+  },
+  roundBadge: {
+    minWidth: 56,
+    alignItems: 'center',
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  roundBadgeText: {
+    color: 'rgba(255,255,255,0.86)',
+    fontFamily: fonts.monoMedium,
+    fontSize: 14,
+  },
+  main: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  finishWrap: {
+    alignItems: 'center',
+    gap: 12,
+  },
+  finishTitle: {
+    color: colors.onSurface,
+    fontFamily: fonts.sansBlack,
+    fontSize: 48,
+    textAlign: 'center',
+  },
+  finishSubtitle: {
+    color: 'rgba(255,255,255,0.8)',
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 24,
+  },
+  timerText: {
+    color: colors.onSurface,
+    fontFamily: fonts.monoBold,
+    fontSize: 72,
+    letterSpacing: -3,
+  },
+  timerCountdown: {
+    transform: [{ scale: 1.04 }],
+  },
+  exerciseText: {
+    marginTop: 24,
+    color: colors.onSurface,
+    fontFamily: fonts.sansBold,
+    fontSize: 34,
+    textAlign: 'center',
+  },
+  helperText: {
+    marginTop: 24,
+    color: 'rgba(255,255,255,0.72)',
+    fontFamily: fonts.sansMedium,
+    fontSize: 20,
+    textAlign: 'center',
+  },
+  roundDots: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 24,
+  },
+  roundDot: {
+    height: 10,
+    width: 10,
+    borderRadius: 5,
+  },
+  roundDotComplete: {
+    backgroundColor: colors.onSurface,
+  },
+  roundDotPending: {
+    backgroundColor: 'rgba(255,255,255,0.35)',
+  },
+  roundOverflow: {
+    color: 'rgba(255,255,255,0.66)',
+    fontFamily: fonts.sansMedium,
+    fontSize: 14,
+  },
+  controls: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingBottom: 28,
+  },
+  pauseButton: {
+    height: 64,
+    width: 64,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 32,
+    backgroundColor: colors.onSurface,
+  },
+});

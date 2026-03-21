@@ -1,0 +1,27 @@
+{
+  "expo": {
+    "name": "Interval Trainer",
+    "slug": "interval-trainer",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "scheme": "intervaltrainer",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#030305"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#030305"
+      }
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "plugins": ["expo-audio", "expo-font"]
+  }
+}

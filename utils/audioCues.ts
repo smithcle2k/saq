@@ -1,79 +1,61 @@
+import { useCallback } from 'react';
+import { setAudioModeAsync, useAudioPlayer } from 'expo-audio';
+import beepWav from '../assets/audio/beep.wav';
+import whistleWav from '../assets/audio/whistle.wav';
+import buzzerWav from '../assets/audio/buzzer.wav';
+
 export type AudioCueName = 'beep' | 'whistle' | 'buzzer';
 
 interface InitializeAudioCueOptions {
   force?: boolean;
 }
 
-const AUDIO_CUE_SOURCES: Record<AudioCueName, string> = {
-  beep: '/beep.wav',
-  whistle: '/whistle.wav',
-  buzzer: '/buzzer.wav',
-};
-
 let hasPrimedAudioCues = false;
-const audioCueElements = new Map<AudioCueName, HTMLAudioElement>();
 
-const canUseAudio = () => typeof window !== 'undefined' && typeof Audio !== 'undefined';
+export const useAudioCues = () => {
+  const beepPlayer = useAudioPlayer(beepWav);
+  const whistlePlayer = useAudioPlayer(whistleWav);
+  const buzzerPlayer = useAudioPlayer(buzzerWav);
 
-const getAudioCueElement = (name: AudioCueName) => {
-  let audio = audioCueElements.get(name);
-  if (audio) {
-    return audio;
-  }
+  const initializeAudioCues = useCallback(async (options: InitializeAudioCueOptions = {}) => {
+    if (hasPrimedAudioCues && !options.force) return;
 
-  audio = new Audio(AUDIO_CUE_SOURCES[name]);
-  audio.preload = 'auto';
-  audio.setAttribute('playsinline', 'true');
-  audioCueElements.set(name, audio);
+    hasPrimedAudioCues = true;
+    await setAudioModeAsync({
+      playsInSilentMode: true,
+      shouldPlayInBackground: false,
+    });
+  }, []);
 
-  return audio;
-};
+  const playAudioCue = useCallback(
+    (name: AudioCueName) => {
+      const player =
+        name === 'beep' ? beepPlayer : name === 'whistle' ? whistlePlayer : buzzerPlayer;
 
-const resetAudioCueElement = (audio: HTMLAudioElement) => {
-  audio.pause();
-
-  try {
-    audio.currentTime = 0;
-  } catch {
-    // Ignore currentTime errors while metadata is still loading.
-  }
-};
-
-export const initializeAudioCues = (options: InitializeAudioCueOptions = {}) => {
-  if (!canUseAudio()) return;
-
-  const audioElements = Object.keys(AUDIO_CUE_SOURCES).map((name) =>
-    getAudioCueElement(name as AudioCueName)
+      try {
+        player.seekTo(0);
+        player.play();
+      } catch {
+        // Ignore transient playback errors if the asset is still settling.
+      }
+    },
+    [beepPlayer, buzzerPlayer, whistlePlayer]
   );
 
-  if (hasPrimedAudioCues && !options.force) {
-    return;
-  }
+  const stopAudioCues = useCallback(() => {
+    [beepPlayer, whistlePlayer, buzzerPlayer].forEach((player) => {
+      try {
+        player.pause();
+        player.seekTo(0);
+      } catch {
+        // Ignore if a player is not ready yet.
+      }
+    });
+  }, [beepPlayer, buzzerPlayer, whistlePlayer]);
 
-  hasPrimedAudioCues = true;
-
-  audioElements.forEach((audio) => {
-    const restoreMuted = audio.muted;
-    audio.muted = true;
-    resetAudioCueElement(audio);
-
-    void audio
-      .play()
-      .then(() => {
-        resetAudioCueElement(audio);
-        audio.muted = restoreMuted;
-      })
-      .catch(() => {
-        audio.muted = restoreMuted;
-      });
-  });
-};
-
-export const playAudioCue = (name: AudioCueName) => {
-  if (!canUseAudio()) return;
-
-  const audio = getAudioCueElement(name);
-  audio.muted = false;
-  resetAudioCueElement(audio);
-  void audio.play().catch(() => undefined);
+  return {
+    initializeAudioCues,
+    playAudioCue,
+    stopAudioCues,
+  };
 };

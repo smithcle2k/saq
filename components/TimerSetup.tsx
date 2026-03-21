@@ -1,6 +1,8 @@
 import React from 'react';
-import { Settings, BarChart2, Play, Timer } from 'lucide-react';
+import { Ionicons } from '@expo/vector-icons';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { TimerConfig, TimerMode } from '../types';
+import { colors, fonts } from '../theme';
 import { NumberInput } from './NumberInput';
 import { calculateTotalTime, formatTime } from '../utils/timeUtils';
 
@@ -34,192 +36,354 @@ export const TimerSetup: React.FC<TimerSetupProps> = ({
   const totalDuration = calculateTotalTime(config);
 
   return (
-    <div className="h-full w-full overflow-y-auto">
-      <div className="flex flex-col min-h-full max-w-md mx-auto p-4 lg:max-w-4xl">
-        {/* Header */}
-        <div className="text-center mb-6 pt-2 shrink-0">
-          <div className="flex items-center justify-center gap-2 mb-1">
-            <Timer className="w-5 h-5 text-primary" />
-            <h1 className="text-xl font-semibold text-on-surface">Interval Trainer</h1>
-          </div>
-          <p className="text-sm text-on-surface-variant">Choose a session mode and train</p>
-        </div>
+    <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <View style={styles.header}>
+        <View style={styles.titleRow}>
+          <Ionicons name="timer-outline" size={22} color={colors.primary} />
+          <Text style={styles.title}>Interval Trainer</Text>
+        </View>
+        <Text style={styles.subtitle}>Choose a session mode and train</Text>
+      </View>
 
-        <div className="mb-5 glass-panel rounded-2xl p-2">
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={() => onModeChange('INTERVAL')}
-              className={`h-14 rounded-[1.1rem] border text-sm font-semibold tracking-[0.2em] transition-all ${
-                mode === 'INTERVAL'
-                  ? 'border-primary/50 bg-primary/20 text-primary shadow-[0_0_20px_rgba(0,240,255,0.25)]'
-                  : 'border-transparent bg-black/10 text-on-surface-variant hover:bg-black/20 hover:text-on-surface'
-              }`}
-            >
-              INTERVAL
-            </button>
-            <button
-              onClick={() => onModeChange('SAQ')}
-              className={`h-14 rounded-[1.1rem] border text-sm font-semibold tracking-[0.2em] transition-all ${
-                mode === 'SAQ'
-                  ? 'border-primary/50 bg-primary/20 text-primary shadow-[0_0_20px_rgba(0,240,255,0.25)]'
-                  : 'border-transparent bg-black/10 text-on-surface-variant hover:bg-black/20 hover:text-on-surface'
-              }`}
-            >
-              SAQ
-            </button>
-          </div>
-        </div>
+      <View style={styles.modeCard}>
+        <Pressable
+          onPress={() => onModeChange('INTERVAL')}
+          style={({ pressed }) => [
+            styles.modeButton,
+            mode === 'INTERVAL' ? styles.modeButtonActive : styles.modeButtonInactive,
+            pressed && styles.pressed,
+          ]}
+        >
+          <Text style={[styles.modeLabel, mode === 'INTERVAL' && styles.modeLabelActive]}>
+            INTERVAL
+          </Text>
+        </Pressable>
+        <Pressable
+          onPress={() => onModeChange('SAQ')}
+          style={({ pressed }) => [
+            styles.modeButton,
+            mode === 'SAQ' ? styles.modeButtonActive : styles.modeButtonInactive,
+            pressed && styles.pressed,
+          ]}
+        >
+          <Text style={[styles.modeLabel, mode === 'SAQ' && styles.modeLabelActive]}>SAQ</Text>
+        </Pressable>
+      </View>
 
-        {!isSaqMode && (
-          <button
-            type="button"
-            onClick={() => setConfig((prev) => ({ ...prev, slowMode: !prev.slowMode }))}
-            className={`mb-5 w-full rounded-2xl border p-4 text-left transition-all ${
-              config.slowMode
-                ? 'border-primary/50 bg-primary/15 shadow-[0_0_20px_rgba(0,240,255,0.18)]'
-                : 'border-white/5 bg-black/10 hover:border-white/10 hover:bg-black/15'
-            }`}
-            aria-pressed={config.slowMode}
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs font-bold tracking-[0.24em] text-primary uppercase">
-                  Add Break
-                </p>
-              </div>
-              <div
-                className={`mt-1 flex h-7 w-12 rounded-full p-1 transition-colors ${
-                  config.slowMode ? 'bg-primary/70' : 'bg-white/15'
-                }`}
-              >
-                <div
-                  className={`h-5 w-5 rounded-full bg-white transition-transform ${
-                    config.slowMode ? 'translate-x-5' : 'translate-x-0'
-                  }`}
-                />
-              </div>
-            </div>
-          </button>
-        )}
+      {!isSaqMode ? (
+        <Pressable
+          onPress={() => setConfig((prev) => ({ ...prev, slowMode: !prev.slowMode }))}
+          style={({ pressed }) => [
+            styles.slowModeCard,
+            config.slowMode ? styles.slowModeCardActive : null,
+            pressed && styles.pressed,
+          ]}
+        >
+          <View>
+            <Text style={styles.slowModeLabel}>Add Break</Text>
+          </View>
+          <View style={[styles.toggleTrack, config.slowMode ? styles.toggleTrackActive : null]}>
+            <View style={[styles.toggleThumb, config.slowMode ? styles.toggleThumbActive : null]} />
+          </View>
+        </Pressable>
+      ) : null}
 
-        {/* Main Content */}
-        <div className="flex-1 flex flex-col lg:flex-row lg:gap-8">
-          {/* Timer Configuration */}
-          <div className="flex-1 flex flex-col justify-center space-y-3">
-            <NumberInput
-              label="Prep"
-              value={config.prepTime}
-              onChange={(v) => updateConfig('prepTime', v)}
-              step={5}
-              min={5}
-            />
+      <View style={styles.inputs}>
+        <NumberInput
+          label="Prep"
+          value={config.prepTime}
+          onChange={(v) => updateConfig('prepTime', v)}
+          step={5}
+          min={5}
+        />
+        <NumberInput
+          label="Work"
+          value={config.workTime}
+          onChange={(v) => updateConfig('workTime', v)}
+          step={5}
+          min={5}
+          readOnly
+        />
+        <NumberInput
+          label="Rest"
+          value={config.restTime}
+          onChange={(v) => updateConfig('restTime', v)}
+          step={1}
+          min={15}
+          max={3600}
+        />
+        <NumberInput
+          label="Rounds"
+          value={config.rounds}
+          onChange={(v) => updateConfig('rounds', v)}
+          isTime={false}
+          min={1}
+          max={99}
+        />
+        <NumberInput
+          label="Cool Down"
+          value={config.coolDownTime}
+          onChange={(v) => updateConfig('coolDownTime', v)}
+          step={5}
+        />
+      </View>
 
-            <NumberInput
-              label="Work"
-              value={config.workTime}
-              onChange={(v) => updateConfig('workTime', v)}
-              step={5}
-              min={5}
-              readOnly={true}
-            />
+      <View style={styles.summaryCard}>
+        <Text style={styles.summaryLabel}>Total</Text>
+        <Text style={styles.summaryValue}>{formatTime(totalDuration)}</Text>
+      </View>
 
-            <NumberInput
-              label="Rest"
-              value={config.restTime}
-              onChange={(v) => updateConfig('restTime', v)}
-              step={1}
-              min={15}
-              max={3600}
-            />
+      <View style={styles.sessionCard}>
+        <Text style={styles.sessionHeading}>Session Summary</Text>
+        <View style={styles.sessionRow}>
+          <Text style={styles.sessionKey}>Mode</Text>
+          <Text style={styles.sessionValue}>{mode}</Text>
+        </View>
+        <View style={styles.sessionRow}>
+          <Text style={styles.sessionKey}>Rounds</Text>
+          <Text style={styles.sessionValue}>{config.rounds}</Text>
+        </View>
+        {!isSaqMode ? (
+          <View style={styles.sessionRow}>
+            <Text style={styles.sessionKey}>Add Break</Text>
+            <Text style={styles.sessionValue}>{config.slowMode ? 'ON' : 'OFF'}</Text>
+          </View>
+        ) : null}
+        <View style={styles.sessionRowLast}>
+          <Text style={styles.sessionKey}>Work / Rest</Text>
+          <Text style={styles.sessionValue}>
+            {config.workTime}s / {config.restTime}s
+          </Text>
+        </View>
+      </View>
 
-            <NumberInput
-              label="Rounds"
-              value={config.rounds}
-              onChange={(v) => updateConfig('rounds', v)}
-              isTime={false}
-              min={1}
-              max={99}
-            />
+      <View style={styles.actions}>
+        <Pressable
+          onPress={onOpenSettings}
+          style={({ pressed }) => [styles.iconAction, pressed && styles.pressed]}
+          accessibilityLabel="Settings"
+        >
+          <Ionicons name="settings-outline" size={22} color={colors.onSurfaceVariant} />
+        </Pressable>
 
-            <NumberInput
-              label="Cool Down"
-              value={config.coolDownTime}
-              onChange={(v) => updateConfig('coolDownTime', v)}
-              step={5}
-            />
+        <Pressable
+          onPress={onOpenStats}
+          style={({ pressed }) => [styles.iconAction, pressed && styles.pressed]}
+          accessibilityLabel="Statistics"
+        >
+          <Ionicons name="bar-chart-outline" size={22} color={colors.onSurfaceVariant} />
+        </Pressable>
 
-            {/* Total Duration */}
-            <div className="mt-2 glass-panel rounded-2xl p-4 flex justify-between items-center relative overflow-hidden">
-              <div className="absolute inset-0 bg-primary/5 blur-xl"></div>
-              <span className="text-sm text-on-surface-variant relative z-10 font-medium">
-                Total
-              </span>
-              <span className="text-xl font-mono font-bold text-primary relative z-10 text-glow">
-                {formatTime(totalDuration)}
-              </span>
-            </div>
-          </div>
-
-          {/* Desktop Sidebar */}
-          <div className="hidden lg:flex lg:flex-col lg:w-56 lg:justify-center">
-            <div className="glass-panel rounded-2xl p-5 relative overflow-hidden">
-              <div className="absolute -top-10 -right-10 w-24 h-24 bg-primary/10 rounded-full blur-2xl"></div>
-              <h3 className="text-xs text-primary font-bold tracking-wider uppercase mb-4 relative z-10">
-                Session Summary
-              </h3>
-              <div className="space-y-3 text-sm text-on-surface relative z-10">
-                <div className="flex justify-between items-center border-b border-white/5 pb-2">
-                  <span className="text-on-surface-variant font-medium">Mode</span>
-                  <span className="font-mono font-bold">{mode}</span>
-                </div>
-                <div className="flex justify-between items-center border-b border-white/5 pb-2">
-                  <span className="text-on-surface-variant font-medium">Rounds</span>
-                  <span className="font-mono font-bold">{config.rounds}</span>
-                </div>
-                {!isSaqMode && (
-                  <div className="flex justify-between items-center border-b border-white/5 pb-2">
-                    <span className="text-on-surface-variant font-medium">Add Break</span>
-                    <span className="font-mono font-bold">{config.slowMode ? 'ON' : 'OFF'}</span>
-                  </div>
-                )}
-                <div className="flex justify-between items-center">
-                  <span className="text-on-surface-variant font-medium">Work / Rest</span>
-                  <span className="font-mono font-bold">
-                    {config.workTime}s / {config.restTime}s
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Bottom Actions */}
-        <div className="mt-8 flex gap-3 pb-safe">
-          <button
-            onClick={onOpenSettings}
-            className="flex-1 h-14 glass-panel-interactive rounded-2xl flex items-center justify-center text-on-surface-variant hover:text-primary transition-all"
-            aria-label="Settings"
-          >
-            <Settings size={22} />
-          </button>
-
-          <button
-            onClick={onOpenStats}
-            className="flex-1 h-14 glass-panel-interactive rounded-2xl flex items-center justify-center text-on-surface-variant hover:text-primary transition-all"
-            aria-label="Statistics"
-          >
-            <BarChart2 size={22} />
-          </button>
-
-          <button
-            onClick={onStart}
-            className="flex-2 h-14 bg-primary/20 border border-primary/40 rounded-2xl flex items-center justify-center gap-2 text-primary hover:bg-primary/30 hover:border-primary/60 hover:shadow-[0_0_20px_rgba(0,240,255,0.4)] active:scale-95 transition-all font-bold tracking-wide"
-          >
-            <Play size={20} fill="currentColor" />
-            <span className="text-lg">START</span>
-          </button>
-        </div>
-      </div>
-    </div>
+        <Pressable
+          onPress={onStart}
+          style={({ pressed }) => [styles.startButton, pressed && styles.pressed]}
+        >
+          <Ionicons name="play" size={20} color={colors.primary} />
+          <Text style={styles.startButtonText}>START</Text>
+        </Pressable>
+      </View>
+    </ScrollView>
   );
 };
+
+const styles = StyleSheet.create({
+  content: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 28,
+    gap: 16,
+  },
+  header: {
+    alignItems: 'center',
+    paddingTop: 8,
+    gap: 4,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  title: {
+    color: colors.onSurface,
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 24,
+  },
+  subtitle: {
+    color: colors.onSurfaceVariant,
+    fontFamily: fonts.sansMedium,
+    fontSize: 14,
+  },
+  modeCard: {
+    flexDirection: 'row',
+    gap: 8,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: colors.outline,
+    backgroundColor: colors.surfaceCard,
+    padding: 8,
+  },
+  modeButton: {
+    flex: 1,
+    height: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 18,
+    borderWidth: 1,
+  },
+  modeButtonActive: {
+    borderColor: 'rgba(0,240,255,0.5)',
+    backgroundColor: 'rgba(0,240,255,0.2)',
+  },
+  modeButtonInactive: {
+    borderColor: 'transparent',
+    backgroundColor: 'rgba(0,0,0,0.12)',
+  },
+  modeLabel: {
+    color: colors.onSurfaceVariant,
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 14,
+    letterSpacing: 2.6,
+  },
+  modeLabelActive: {
+    color: colors.primary,
+  },
+  slowModeCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: colors.outline,
+    backgroundColor: 'rgba(0,0,0,0.14)',
+    paddingHorizontal: 18,
+    paddingVertical: 18,
+  },
+  slowModeCardActive: {
+    borderColor: 'rgba(0,240,255,0.45)',
+    backgroundColor: 'rgba(0,240,255,0.12)',
+  },
+  slowModeLabel: {
+    color: colors.primary,
+    fontFamily: fonts.sansBold,
+    fontSize: 12,
+    letterSpacing: 2.4,
+    textTransform: 'uppercase',
+  },
+  toggleTrack: {
+    height: 28,
+    width: 48,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    padding: 3,
+  },
+  toggleTrackActive: {
+    backgroundColor: 'rgba(0,240,255,0.7)',
+  },
+  toggleThumb: {
+    height: 22,
+    width: 22,
+    borderRadius: 11,
+    backgroundColor: colors.onSurface,
+  },
+  toggleThumbActive: {
+    transform: [{ translateX: 20 }],
+  },
+  inputs: {
+    gap: 12,
+  },
+  summaryCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: colors.outline,
+    backgroundColor: colors.surfaceCard,
+    paddingHorizontal: 18,
+    paddingVertical: 16,
+  },
+  summaryLabel: {
+    color: colors.onSurfaceVariant,
+    fontFamily: fonts.sansMedium,
+    fontSize: 14,
+  },
+  summaryValue: {
+    color: colors.primary,
+    fontFamily: fonts.monoBold,
+    fontSize: 24,
+  },
+  sessionCard: {
+    gap: 12,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: colors.outline,
+    backgroundColor: colors.surfaceCard,
+    padding: 18,
+  },
+  sessionHeading: {
+    color: colors.primary,
+    fontFamily: fonts.sansBold,
+    fontSize: 12,
+    letterSpacing: 1.8,
+    textTransform: 'uppercase',
+  },
+  sessionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.05)',
+    paddingBottom: 10,
+  },
+  sessionRowLast: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  sessionKey: {
+    color: colors.onSurfaceVariant,
+    fontFamily: fonts.sansMedium,
+    fontSize: 14,
+  },
+  sessionValue: {
+    color: colors.onSurface,
+    fontFamily: fonts.monoBold,
+    fontSize: 14,
+  },
+  actions: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingBottom: 8,
+  },
+  iconAction: {
+    height: 56,
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: colors.outlineStrong,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+  },
+  startButton: {
+    flex: 2,
+    height: 56,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: 'rgba(0,240,255,0.45)',
+    backgroundColor: 'rgba(0,240,255,0.18)',
+  },
+  startButtonText: {
+    color: colors.primary,
+    fontFamily: fonts.sansBold,
+    fontSize: 18,
+    letterSpacing: 0.8,
+  },
+  pressed: {
+    opacity: 0.82,
+  },
+});
