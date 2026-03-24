@@ -19,7 +19,7 @@ import {
   RobotoMono_700Bold,
   useFonts as useRobotoMonoFonts,
 } from '@expo-google-fonts/roboto-mono';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { TimerConfig, TimerMode, View as AppView, WorkoutHistoryItem } from './types';
 import { TimerSetup } from './components/TimerSetup';
@@ -32,6 +32,38 @@ import { calculateTotalTime } from './utils/timeUtils';
 import { initializeSpeech } from './utils/tts';
 import { useAudioCues } from './utils/audioCues';
 import { useStore } from './store';
+
+class ErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { error: Error | null }
+> {
+  state = { error: null };
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <View
+          style={{
+            flex: 1,
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 20,
+            backgroundColor: '#030305',
+          }}
+        >
+          <Text
+            style={{ color: '#f43f5e', fontSize: 16, textAlign: 'center', fontFamily: 'monospace' }}
+          >
+            {(this.state.error as Error).message}
+          </Text>
+        </View>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 function App() {
   const [view, setView] = useState<AppView>('SETUP');
@@ -227,4 +259,10 @@ const styles = StyleSheet.create({
   },
 });
 
-export default App;
+export default function AppWithBoundary() {
+  return (
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
+  );
+}

@@ -61,13 +61,15 @@ export const Settings: React.FC<SettingsProps> = ({ exercises, setExercises, mod
         <Ionicons name="reorder-three" size={24} color={colors.onSurfaceVariant} />
       </Pressable>
       <Text style={styles.itemLabel}>{item.exercise}</Text>
-      <Pressable
-        onPress={() => handleRemove(getIndex() ?? 0)}
-        style={styles.deleteButton}
-        accessibilityLabel={`Delete ${item.exercise}`}
-      >
-        <Ionicons name="trash-outline" size={20} color={colors.onSurfaceVariant} />
-      </Pressable>
+      {mode !== 'SAQ' && (
+        <Pressable
+          onPress={() => handleRemove(getIndex() ?? 0)}
+          style={styles.deleteButton}
+          accessibilityLabel={`Delete ${item.exercise}`}
+        >
+          <Ionicons name="trash-outline" size={20} color={colors.onSurfaceVariant} />
+        </Pressable>
+      )}
     </View>
   );
 
@@ -81,36 +83,38 @@ export const Settings: React.FC<SettingsProps> = ({ exercises, setExercises, mod
         <View style={styles.headerSpacer} />
       </View>
 
-      <View style={styles.addCard}>
-        <Text style={styles.addLabel}>Add new cue</Text>
-        <View style={styles.addRow}>
-          <TextInput
-            value={newExercise}
-            onChangeText={(value) => {
-              setNewExercise(value);
-              if (inputError) setInputError('');
-            }}
-            onSubmitEditing={handleSubmitEditing}
-            placeholder="e.g. Shuffle left"
-            placeholderTextColor="rgba(148,163,184,0.4)"
-            style={styles.input}
-            returnKeyType="done"
-            accessibilityLabel="Cue label"
-          />
-          <Pressable
-            onPress={handleAdd}
-            disabled={!newExercise.trim()}
-            style={({ pressed }) => [
-              styles.addButton,
-              !newExercise.trim() && styles.addButtonDisabled,
-              pressed && styles.pressed,
-            ]}
-          >
-            <Ionicons name="add" size={24} color={colors.primary} />
-          </Pressable>
+      {mode !== 'SAQ' && (
+        <View style={styles.addCard}>
+          <Text style={styles.addLabel}>Add new cue</Text>
+          <View style={styles.addRow}>
+            <TextInput
+              value={newExercise}
+              onChangeText={(value) => {
+                setNewExercise(value);
+                if (inputError) setInputError('');
+              }}
+              onSubmitEditing={handleSubmitEditing}
+              placeholder="e.g. Shuffle left"
+              placeholderTextColor="rgba(148,163,184,0.4)"
+              style={styles.input}
+              returnKeyType="done"
+              accessibilityLabel="Cue label"
+            />
+            <Pressable
+              onPress={handleAdd}
+              disabled={!newExercise.trim()}
+              style={({ pressed }) => [
+                styles.addButton,
+                !newExercise.trim() && styles.addButtonDisabled,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Ionicons name="add" size={24} color={colors.primary} />
+            </Pressable>
+          </View>
+          {inputError ? <Text style={styles.errorText}>{inputError}</Text> : null}
         </View>
-        {inputError ? <Text style={styles.errorText}>{inputError}</Text> : null}
-      </View>
+      )}
 
       <View style={styles.listWrap}>
         {exercises.length === 0 ? (
