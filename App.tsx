@@ -1,31 +1,42 @@
-import React, { useState, useEffect } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
-import { TimerConfig, TimerMode, View, WorkoutHistoryItem } from './types';
+import 'react-native-gesture-handler';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { LinearGradient } from 'expo-linear-gradient';
+import { StatusBar } from 'expo-status-bar';
+import * as SystemUI from 'expo-system-ui';
+import { useFonts as useOutfitFonts } from '@expo-google-fonts/outfit';
+import {
+  Outfit_400Regular,
+  Outfit_500Medium,
+  Outfit_600SemiBold,
+  Outfit_700Bold,
+  Outfit_800ExtraBold,
+  Outfit_900Black,
+} from '@expo-google-fonts/outfit';
+import {
+  RobotoMono_400Regular,
+  RobotoMono_500Medium,
+  RobotoMono_700Bold,
+  useFonts as useRobotoMonoFonts,
+} from '@expo-google-fonts/roboto-mono';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { TimerConfig, TimerMode, View as AppView, WorkoutHistoryItem } from './types';
 import { TimerSetup } from './components/TimerSetup';
 import { ActiveTimer } from './components/ActiveTimer';
 import { Settings } from './components/Settings';
 import { Statistics } from './components/Statistics';
 import { Tutorial } from './components/Tutorial';
+import { gradients, colors } from './theme';
 import { calculateTotalTime } from './utils/timeUtils';
 import { initializeSpeech } from './utils/tts';
-import { initializeAudioCues } from './utils/audioCues';
+import { useAudioCues } from './utils/audioCues';
 import { useStore } from './store';
 
-// Page transition variants
-const pageVariants = {
-  initial: { opacity: 0 },
-  animate: { opacity: 1 },
-  exit: { opacity: 0 },
-};
-
-const pageTransition = {
-  type: 'tween',
-  duration: 0.2,
-  ease: 'easeInOut',
-};
-
 function App() {
-  const [view, setView] = useState<View>('SETUP');
+  const [view, setView] = useState<AppView>('SETUP');
+  const [isHydrated, setIsHydrated] = useState(useStore.persist.hasHydrated());
+  const hasPrimedInteractionRef = useRef(false);
 
   const mode = useStore((state) => state.mode);
   const modeConfigs = useStore((state) => state.modeConfigs);
@@ -33,22 +44,64 @@ function App() {
   const exercises = exercisesByMode[mode];
   const history = useStore((state) => state.history);
   const tutorialSeen = useStore((state) => state.tutorialSeen);
-
   const setMode = useStore((state) => state.setMode);
   const setModeConfigs = useStore((state) => state.setModeConfigs);
   const setExercises = useStore((state) => state.setExercises);
   const addHistoryItem = useStore((state) => state.addHistoryItem);
   const setTutorialSeen = useStore((state) => state.setTutorialSeen);
 
+  const outfitFontsLoaded = useOutfitFonts({
+    Outfit_400Regular,
+    Outfit_500Medium,
+    Outfit_600SemiBold,
+    Outfit_700Bold,
+    Outfit_800ExtraBold,
+    Outfit_900Black,
+  })[0];
+  const monoFontsLoaded = useRobotoMonoFonts({
+    RobotoMono_400Regular,
+    RobotoMono_500Medium,
+    RobotoMono_700Bold,
+  })[0];
+
+  const { initializeAudioCues, playAudioCue, stopAudioCues } = useAudioCues();
+
+  const config = useMemo<TimerConfig>(() => ({ mode, ...modeConfigs[mode] }), [mode, modeConfigs]);
   const showTutorial = !tutorialSeen;
-  const config: TimerConfig = { mode, ...modeConfigs[mode] };
+  const fontsLoaded = outfitFontsLoaded && monoFontsLoaded;
+
+  useEffect(() => {
+    void SystemUI.setBackgroundColorAsync(colors.surface);
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = useStore.persist.onFinishHydration(() => setIsHydrated(true));
+    return unsubscribe;
+  }, []);
+
+  const primeMedia = async (force = true) => {
+    initializeSpeech({ force });
+    await initializeAudioCues({ force });
+  };
+
+  const handleFirstInteraction = () => {
+    if (hasPrimedInteractionRef.current) return;
+    hasPrimedInteractionRef.current = true;
+    void primeMedia(true);
+  };
 
   const setConfig: React.Dispatch<React.SetStateAction<TimerConfig>> = (updater) => {
     setModeConfigs((prev) => {
       const currentConfig: TimerConfig = { mode, ...prev[mode] };
       const nextConfig = typeof updater === 'function' ? updater(currentConfig) : updater;
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { mode: _mode, ...nextValues } = nextConfig;
+      const nextValues = {
+        prepTime: nextConfig.prepTime,
+        workTime: nextConfig.workTime,
+        restTime: nextConfig.restTime,
+        rounds: nextConfig.rounds,
+        coolDownTime: nextConfig.coolDownTime,
+        slowMode: nextConfig.slowMode,
+      };
 
       return {
         ...prev,
@@ -57,161 +110,121 @@ function App() {
     });
   };
 
-  const handleDismissTutorial = () => {
-    setTutorialSeen(true);
-  };
-
-  // Unlock speech synthesis on the first user interaction.
-  useEffect(() => {
-    const unlockMedia = () => {
-      initializeSpeech({ force: true });
-      initializeAudioCues({ force: true });
-      window.removeEventListener('click', unlockMedia);
-      window.removeEventListener('touchend', unlockMedia);
-      window.removeEventListener('keydown', unlockMedia);
-    };
-
-    window.addEventListener('click', unlockMedia, { passive: true });
-    window.addEventListener('touchend', unlockMedia, { passive: true });
-    window.addEventListener('keydown', unlockMedia);
-
-    return () => {
-      window.removeEventListener('click', unlockMedia);
-      window.removeEventListener('touchend', unlockMedia);
-      window.removeEventListener('keydown', unlockMedia);
-    };
-  }, []);
-
   const saveHistory = (newItem: WorkoutHistoryItem) => {
     addHistoryItem(newItem);
   };
 
-  const handleStart = () => {
-    initializeSpeech({ force: true });
-    initializeAudioCues({ force: true });
+  const handleDismissTutorial = () => {
+    handleFirstInteraction();
+    setTutorialSeen(true);
+  };
+
+  const handleStart = async () => {
+    await primeMedia(true);
     setView('TIMER');
   };
 
   const handleModeChange = (nextMode: TimerMode) => {
+    handleFirstInteraction();
     setMode(nextMode);
   };
 
   const handleFinish = () => {
-    // Workout completed successfully
     const duration = calculateTotalTime(config);
     saveHistory({
       date: new Date().toISOString(),
-      duration: duration,
+      duration,
     });
     setView('SETUP');
   };
 
   const handleExit = () => {
-    // Workout cancelled/exited early
+    stopAudioCues();
     setView('SETUP');
-  };
-
-  const handleOpenSettings = () => {
-    setView('SETTINGS');
-  };
-
-  const handleOpenStats = () => {
-    setView('STATS');
   };
 
   const handleCloseSubView = () => {
     setView('SETUP');
   };
 
-  // Check for reduced motion preference
-  const prefersReducedMotion =
-    typeof window !== 'undefined' &&
-    window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  if (!fontsLoaded || !isHydrated) {
+    return (
+      <GestureHandlerRootView style={styles.flex}>
+        <LinearGradient colors={gradients.app} style={styles.loading}>
+          <StatusBar style="light" />
+          <ActivityIndicator color={colors.primary} size="large" />
+        </LinearGradient>
+      </GestureHandlerRootView>
+    );
+  }
 
   return (
-    <div className="h-screen w-full bg-transparent text-on-surface overflow-hidden flex flex-col font-sans relative">
-      <AnimatePresence mode="wait">
-        {view === 'SETUP' && (
-          <motion.div
-            key="setup"
-            variants={prefersReducedMotion ? {} : pageVariants}
-            initial="initial"
-            animate="animate"
-            exit="exit"
-            transition={pageTransition}
-            className="h-full"
-          >
-            <TimerSetup
-              config={config}
-              setConfig={setConfig}
-              mode={mode}
-              onModeChange={handleModeChange}
-              onStart={handleStart}
-              onOpenSettings={handleOpenSettings}
-              onOpenStats={handleOpenStats}
-            />
-          </motion.div>
-        )}
-
-        {view === 'SETTINGS' && (
-          <motion.div
-            key="settings"
-            variants={prefersReducedMotion ? {} : pageVariants}
-            initial="initial"
-            animate="animate"
-            exit="exit"
-            transition={pageTransition}
-            className="h-full"
-          >
-            <Settings
-              exercises={exercises}
-              setExercises={setExercises}
-              mode={mode}
-              onClose={handleCloseSubView}
-            />
-          </motion.div>
-        )}
-
-        {view === 'STATS' && (
-          <motion.div
-            key="stats"
-            variants={prefersReducedMotion ? {} : pageVariants}
-            initial="initial"
-            animate="animate"
-            exit="exit"
-            transition={pageTransition}
-            className="h-full"
-          >
-            <Statistics history={history} onClose={handleCloseSubView} />
-          </motion.div>
-        )}
-
-        {view === 'TIMER' && (
-          <motion.div
-            key="timer"
-            variants={prefersReducedMotion ? {} : pageVariants}
-            initial="initial"
-            animate="animate"
-            exit="exit"
-            transition={pageTransition}
-            className="h-full"
-          >
+    <GestureHandlerRootView style={styles.flex}>
+      <SafeAreaProvider>
+        <StatusBar style="light" />
+        <View style={styles.flex} onTouchStart={handleFirstInteraction}>
+          {view === 'TIMER' ? (
             <ActiveTimer
               config={config}
               exercises={exercises}
               onFinish={handleFinish}
               onExit={handleExit}
+              playAudioCue={playAudioCue}
+              stopAudioCues={stopAudioCues}
             />
-          </motion.div>
-        )}
-      </AnimatePresence>
+          ) : (
+            <LinearGradient colors={gradients.app} style={styles.flex}>
+              <SafeAreaView style={styles.flex}>
+                {view === 'SETUP' ? (
+                  <TimerSetup
+                    config={config}
+                    setConfig={setConfig}
+                    mode={mode}
+                    onModeChange={handleModeChange}
+                    onStart={handleStart}
+                    onOpenSettings={() => {
+                      handleFirstInteraction();
+                      setView('SETTINGS');
+                    }}
+                    onOpenStats={() => {
+                      handleFirstInteraction();
+                      setView('STATS');
+                    }}
+                  />
+                ) : null}
 
-      {/* First-time tutorial overlay */}
-      <AnimatePresence>
-        {showTutorial && <Tutorial onDismiss={handleDismissTutorial} />}
-      </AnimatePresence>
-    </div>
+                {view === 'SETTINGS' ? (
+                  <Settings
+                    exercises={exercises}
+                    setExercises={setExercises}
+                    mode={mode}
+                    onClose={handleCloseSubView}
+                  />
+                ) : null}
+
+                {view === 'STATS' ? (
+                  <Statistics history={history} onClose={handleCloseSubView} />
+                ) : null}
+              </SafeAreaView>
+            </LinearGradient>
+          )}
+
+          {showTutorial ? <Tutorial onDismiss={handleDismissTutorial} /> : null}
+        </View>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
+
+const styles = StyleSheet.create({
+  flex: {
+    flex: 1,
+  },
+  loading: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});
 
 export default App;

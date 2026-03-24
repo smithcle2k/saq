@@ -1,14 +1,12 @@
-const isSpeechSupported = () =>
-  typeof window !== 'undefined' &&
-  'speechSynthesis' in window &&
-  'SpeechSynthesisUtterance' in window;
+import * as Speech from 'expo-speech';
 
 let voicesReadyPromise: Promise<void> | null = null;
-let preferredVoice: SpeechSynthesisVoice | undefined;
+let preferredVoice: string | undefined;
 let hasPrimedSpeech = false;
-let activeUtterance: SpeechSynthesisUtterance | null = null;
+let activeSpeechToken = 0;
+let isSpeechActive = false;
 let queuedSpeech: Array<{ text: string; afterPreviousEndMs: number }> = [];
-let delayedSpeechStartTimeoutId: number | null = null;
+let delayedSpeechStartTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
 export interface SpeakOptions {
   interrupt?: boolean;
@@ -19,47 +17,29 @@ interface InitializeSpeechOptions {
   force?: boolean;
 }
 
-const selectPreferredVoice = () => {
-  const voices = window.speechSynthesis.getVoices();
+const selectPreferredVoice = async () => {
+  const voices = await Speech.getAvailableVoicesAsync();
   const prioritized = voices.find(
     (voice) =>
-      voice.lang.toLowerCase().startsWith('en') &&
+      voice.language.toLowerCase().startsWith('en') &&
       (voice.name.includes('Google') ||
         voice.name.includes('Daniel') ||
         voice.name.includes('Samantha'))
   );
 
-  if (prioritized) return prioritized;
-  return voices.find((voice) => voice.lang.toLowerCase().startsWith('en'));
+  if (prioritized) return prioritized.identifier;
+  return voices.find((voice) => voice.language.toLowerCase().startsWith('en'))?.identifier;
 };
 
 const loadVoices = () => {
-  if (!isSpeechSupported()) return Promise.resolve();
   if (voicesReadyPromise) return voicesReadyPromise;
 
   voicesReadyPromise = new Promise<void>((resolve) => {
-    const synth = window.speechSynthesis;
-    const finish = () => {
-      preferredVoice = selectPreferredVoice();
-      resolve();
-    };
-
-    const availableVoices = synth.getVoices();
-    if (availableVoices.length > 0) {
-      finish();
-      return;
-    }
-
-    const onVoicesChanged = () => {
-      synth.removeEventListener('voiceschanged', onVoicesChanged);
-      finish();
-    };
-
-    synth.addEventListener('voiceschanged', onVoicesChanged);
-    window.setTimeout(() => {
-      synth.removeEventListener('voiceschanged', onVoicesChanged);
-      finish();
-    }, 1000);
+    selectPreferredVoice()
+      .then((voice) => {
+        preferredVoice = voice;
+      })
+      .finally(resolve);
   });
 
   return voicesReadyPromise;
@@ -67,73 +47,59 @@ const loadVoices = () => {
 
 const clearDelayedSpeechStart = () => {
   if (delayedSpeechStartTimeoutId !== null) {
-    window.clearTimeout(delayedSpeechStartTimeoutId);
+    clearTimeout(delayedSpeechStartTimeoutId);
     delayedSpeechStartTimeoutId = null;
   }
 };
 
-const createUtterance = (text: string, onDone: () => void) => {
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.rate = 1;
-  utterance.pitch = 1;
-  utterance.volume = 1;
-  utterance.lang = 'en-US';
-  if (preferredVoice) {
-    utterance.voice = preferredVoice;
-  }
-  utterance.onend = onDone;
-  utterance.onerror = onDone;
-
-  return utterance;
-};
-
 const processSpeechQueue = (afterPreviousUtteranceEnded = false) => {
-  if (!isSpeechSupported()) return;
-  if (activeUtterance || delayedSpeechStartTimeoutId !== null || queuedSpeech.length === 0) return;
-
-  const synth = window.speechSynthesis;
+  if (isSpeechActive || delayedSpeechStartTimeoutId !== null || queuedSpeech.length === 0) return;
   const nextSpeech = queuedSpeech.shift();
   if (!nextSpeech) return;
 
   const speakQueuedUtterance = () => {
     delayedSpeechStartTimeoutId = null;
+    const speechToken = ++activeSpeechToken;
+    isSpeechActive = true;
 
-    const utterance = createUtterance(nextSpeech.text, () => {
-      if (activeUtterance === utterance) {
-        activeUtterance = null;
-      }
+    const handleDone = () => {
+      if (speechToken !== activeSpeechToken) return;
+      isSpeechActive = false;
       processSpeechQueue(true);
-    });
+    };
 
-    activeUtterance = utterance;
-    synth.speak(utterance);
+    Speech.speak(nextSpeech.text, {
+      rate: 1,
+      pitch: 1,
+      volume: 1,
+      language: 'en-US',
+      voice: preferredVoice,
+      onDone: handleDone,
+      onError: handleDone,
+      onStopped: handleDone,
+    });
   };
 
   if (afterPreviousUtteranceEnded && nextSpeech.afterPreviousEndMs > 0) {
-    delayedSpeechStartTimeoutId = window.setTimeout(
-      speakQueuedUtterance,
-      nextSpeech.afterPreviousEndMs
-    );
+    delayedSpeechStartTimeoutId = setTimeout(speakQueuedUtterance, nextSpeech.afterPreviousEndMs);
     return;
   }
 
   speakQueuedUtterance();
 };
 
-const speakNow = (text: string, interrupt: boolean, afterPreviousEndMs: number) => {
-  const synth = window.speechSynthesis;
-  synth.resume();
-
+const speakNow = async (text: string, interrupt: boolean, afterPreviousEndMs: number) => {
   if (interrupt) {
     const hasQueuedSpeech = queuedSpeech.length > 0 || delayedSpeechStartTimeoutId !== null;
-    const hasActiveSpeech = activeUtterance !== null || synth.speaking || synth.pending;
+    const hasActiveSpeech = isSpeechActive;
 
     clearDelayedSpeechStart();
     queuedSpeech = [];
-    activeUtterance = null;
+    activeSpeechToken += 1;
+    isSpeechActive = false;
 
     if (hasQueuedSpeech || hasActiveSpeech) {
-      synth.cancel();
+      await Speech.stop();
     }
   }
 
@@ -142,22 +108,21 @@ const speakNow = (text: string, interrupt: boolean, afterPreviousEndMs: number) 
 };
 
 export const initializeSpeech = (options: InitializeSpeechOptions = {}) => {
-  if (!isSpeechSupported()) return;
   void loadVoices();
 
   if (hasPrimedSpeech && !options.force) return;
   hasPrimedSpeech = true;
 
-  // Prime speech synthesis from a user gesture (required in some browsers).
-  window.speechSynthesis.cancel();
-  window.speechSynthesis.resume();
-  const silent = new SpeechSynthesisUtterance(' ');
-  silent.volume = 0;
-  window.speechSynthesis.speak(silent);
+  void Speech.stop();
+  Speech.speak(' ', {
+    volume: 0,
+    rate: 1,
+    pitch: 1,
+    language: 'en-US',
+  });
 };
 
 export const speak = (text: string, options: SpeakOptions = {}) => {
-  if (!isSpeechSupported()) return;
   if (!text?.trim()) return;
 
   const message = text.trim();
@@ -165,5 +130,13 @@ export const speak = (text: string, options: SpeakOptions = {}) => {
   const afterPreviousEndMs = options.afterPreviousEndMs ?? 0;
 
   void loadVoices();
-  speakNow(message, interrupt, afterPreviousEndMs);
+  void speakNow(message, interrupt, afterPreviousEndMs);
+};
+
+export const stopSpeech = () => {
+  clearDelayedSpeechStart();
+  queuedSpeech = [];
+  activeSpeechToken += 1;
+  isSpeechActive = false;
+  return Speech.stop();
 };

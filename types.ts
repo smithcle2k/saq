@@ -2,11 +2,11 @@ export type TimerMode = 'INTERVAL' | 'SAQ';
 
 export interface TimerConfig {
   mode: TimerMode;
-  prepTime: number; // in seconds
-  workTime: number; // in seconds
-  restTime: number; // in seconds
+  prepTime: number;
+  workTime: number;
+  restTime: number;
   rounds: number;
-  coolDownTime: number; // in seconds
+  coolDownTime: number;
   slowMode: boolean;
 }
 
@@ -19,23 +19,8 @@ export enum TimerPhase {
 }
 
 export interface WorkoutHistoryItem {
-  date: string; // ISO string
-  duration: number; // in seconds
+  date: string;
+  duration: number;
 }
 
 export type View = 'SETUP' | 'TIMER' | 'SETTINGS' | 'STATS';
-
-// Screen Wake Lock API types
-declare global {
-  interface Navigator {
-    wakeLock?: {
-      request(type: 'screen'): Promise<WakeLockSentinel>;
-    };
-  }
-
-  interface WakeLockSentinel extends EventTarget {
-    readonly released: boolean;
-    readonly type: 'screen';
-    release(): Promise<void>;
-  }
-}

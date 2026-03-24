@@ -1,6 +1,7 @@
 import React from 'react';
-import { motion } from 'framer-motion';
-import { X } from 'lucide-react';
+import { Ionicons } from '@expo/vector-icons';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { colors, fonts } from '../theme';
 
 interface TutorialProps {
   onDismiss: () => void;
@@ -35,58 +36,131 @@ const sections: Section[] = [
 ];
 
 export const Tutorial: React.FC<TutorialProps> = ({ onDismiss }) => (
-  <motion.div
-    className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
-    initial={{ opacity: 0 }}
-    animate={{ opacity: 1 }}
-    exit={{ opacity: 0 }}
-  >
-    {/* Backdrop */}
-    <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={onDismiss} />
+  <Modal transparent animationType="fade" visible onRequestClose={onDismiss}>
+    <View style={styles.overlay}>
+      <Pressable style={styles.backdrop} onPress={onDismiss} />
+      <View style={styles.card}>
+        <View style={styles.glow} />
 
-    {/* Card */}
-    <motion.div
-      className="relative w-full max-w-md glass-panel rounded-[2rem] shadow-2xl overflow-hidden border border-white/10"
-      initial={{ y: 50, opacity: 0, scale: 0.97 }}
-      animate={{ y: 0, opacity: 1, scale: 1 }}
-      exit={{ y: 50, opacity: 0, scale: 0.97 }}
-      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-    >
-      <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>HOW IT WORKS</Text>
+          <Pressable onPress={onDismiss} style={styles.closeButton} accessibilityLabel="Close">
+            <Ionicons name="close" size={20} color={colors.onSurfaceVariant} />
+          </Pressable>
+        </View>
 
-      {/* Header */}
-      <div className="flex items-center justify-between px-8 pt-8 pb-4 border-b border-white/5 relative z-10">
-        <h2 className="text-xl font-bold tracking-wide text-on-surface">HOW IT WORKS</h2>
-        <button
-          onClick={onDismiss}
-          className="p-2.5 rounded-full text-on-surface-variant hover:text-primary bg-white/5 hover:bg-white/10 transition-colors"
-          aria-label="Close"
-        >
-          <X size={20} />
-        </button>
-      </div>
+        <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent}>
+          {sections.map(({ heading, body }) => (
+            <View key={heading} style={styles.section}>
+              <Text style={styles.sectionHeading}>{heading}</Text>
+              <Text style={styles.sectionBody}>{body}</Text>
+            </View>
+          ))}
+        </ScrollView>
 
-      {/* Sections */}
-      <div className="px-8 py-6 space-y-6 overflow-y-auto max-h-[60vh] relative z-10">
-        {sections.map(({ heading, body }) => (
-          <div key={heading}>
-            <p className="text-xs font-bold text-primary uppercase tracking-widest mb-1.5 drop-shadow-[0_0_8px_rgba(0,240,255,0.4)]">
-              {heading}
-            </p>
-            <p className="text-base text-on-surface-variant leading-relaxed font-medium">{body}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Footer */}
-      <div className="px-8 pb-8 pt-6 border-t border-white/5 relative z-10">
-        <button
-          onClick={onDismiss}
-          className="w-full h-14 bg-primary/20 border border-primary/40 text-primary font-bold tracking-wider text-lg rounded-2xl hover:bg-primary/30 hover:shadow-[0_0_20px_rgba(0,240,255,0.4)] active:scale-95 transition-all"
-        >
-          GET STARTED
-        </button>
-      </div>
-    </motion.div>
-  </motion.div>
+        <View style={styles.footer}>
+          <Pressable onPress={onDismiss} style={styles.primaryButton}>
+            <Text style={styles.primaryButtonLabel}>GET STARTED</Text>
+          </Pressable>
+        </View>
+      </View>
+    </View>
+  </Modal>
 );
+
+const styles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    justifyContent: 'center',
+    padding: 16,
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.82)',
+  },
+  card: {
+    maxHeight: '82%',
+    overflow: 'hidden',
+    borderRadius: 32,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(12,12,20,0.96)',
+  },
+  glow: {
+    position: 'absolute',
+    top: -60,
+    right: -60,
+    width: 220,
+    height: 220,
+    borderRadius: 999,
+    backgroundColor: 'rgba(0,240,255,0.08)',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.05)',
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 16,
+  },
+  headerTitle: {
+    color: colors.onSurface,
+    fontFamily: fonts.sansBold,
+    fontSize: 20,
+    letterSpacing: 0.8,
+  },
+  closeButton: {
+    height: 40,
+    width: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  body: {
+    flexGrow: 0,
+  },
+  bodyContent: {
+    gap: 24,
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+  },
+  section: {
+    gap: 8,
+  },
+  sectionHeading: {
+    color: colors.primary,
+    fontFamily: fonts.sansBold,
+    fontSize: 12,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+  },
+  sectionBody: {
+    color: colors.onSurfaceVariant,
+    fontFamily: fonts.sansMedium,
+    fontSize: 16,
+    lineHeight: 24,
+  },
+  footer: {
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.05)',
+    padding: 24,
+  },
+  primaryButton: {
+    height: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(0,240,255,0.4)',
+    backgroundColor: 'rgba(0,240,255,0.18)',
+  },
+  primaryButtonLabel: {
+    color: colors.primary,
+    fontFamily: fonts.sansBold,
+    fontSize: 18,
+    letterSpacing: 1,
+  },
+});

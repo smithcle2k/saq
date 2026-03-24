@@ -1,21 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { TimerConfig, TimerPhase } from '../types';
-import { buildIntervalCuePlan, IntervalCue } from '../utils/intervalCuePlan';
-import { buildSaqCuePlan } from '../utils/saqCuePlan';
 import type { SpeakOptions } from '../utils/tts';
-
-export interface TimerSnapshot {
-  phase: TimerPhase;
-  timeRemaining: number;
-  currentRound: number;
-  currentExercise: string;
-  cuePlan: IntervalCue[];
-}
-
-interface TransitionResult extends TimerSnapshot {
-  announcement: string;
-  shouldFinish: boolean;
-}
+import { TimerConfig, TimerPhase } from '../types';
+import {
+  buildSaqPlanFromExercises,
+  createInitialSnapshot,
+  decrementSnapshot,
+  getNextSnapshot,
+  TimerSnapshot,
+} from '../utils/timerEngine';
+import { IntervalCue } from '../utils/intervalCuePlan';
 
 interface UseActiveTimerEngineParams {
   config: TimerConfig;
@@ -23,129 +16,6 @@ interface UseActiveTimerEngineParams {
   onFinish: () => void;
   onAnnounce: (message: string, options?: SpeakOptions) => void;
 }
-
-const createInitialSnapshot = (config: TimerConfig): TimerSnapshot => ({
-  phase: TimerPhase.PREP,
-  timeRemaining: config.prepTime,
-  currentRound: 1,
-  currentExercise: '',
-  cuePlan: [],
-});
-
-const getNextSnapshot = (
-  current: TimerSnapshot,
-  config: TimerConfig,
-  getRandomExercise: () => string,
-  getSaqCuePlan: () => IntervalCue[]
-): TransitionResult => {
-  if (current.phase === TimerPhase.PREP) {
-    if (config.mode === 'SAQ') {
-      const [firstCue, ...remainingCues] = getSaqCuePlan();
-      return {
-        phase: TimerPhase.WORK,
-        timeRemaining: config.workTime,
-        currentRound: current.currentRound,
-        currentExercise: firstCue?.label ?? 'Move',
-        cuePlan: remainingCues,
-        announcement: firstCue?.label ?? 'Move',
-        shouldFinish: false,
-      };
-    }
-
-    const exercise = getRandomExercise();
-    const intervalCuePlan = buildIntervalCuePlan(exercise, config.slowMode);
-    return {
-      phase: TimerPhase.WORK,
-      timeRemaining: config.workTime,
-      currentRound: current.currentRound,
-      currentExercise: intervalCuePlan.currentExercise,
-      cuePlan: intervalCuePlan.cuePlan,
-      announcement: intervalCuePlan.announcement,
-      shouldFinish: false,
-    };
-  }
-
-  if (current.phase === TimerPhase.WORK) {
-    return {
-      phase: TimerPhase.REST,
-      timeRemaining: config.restTime,
-      currentRound: current.currentRound,
-      currentExercise: '',
-      cuePlan: [],
-      announcement: 'Rest',
-      shouldFinish: false,
-    };
-  }
-
-  if (current.phase === TimerPhase.REST) {
-    if (current.currentRound < config.rounds) {
-      if (config.mode === 'SAQ') {
-        const [firstCue, ...remainingCues] = getSaqCuePlan();
-        return {
-          phase: TimerPhase.WORK,
-          timeRemaining: config.workTime,
-          currentRound: current.currentRound + 1,
-          currentExercise: firstCue?.label ?? 'Move',
-          cuePlan: remainingCues,
-          announcement: firstCue?.label ?? 'Move',
-          shouldFinish: false,
-        };
-      }
-
-      const exercise = getRandomExercise();
-      const intervalCuePlan = buildIntervalCuePlan(exercise, config.slowMode);
-      return {
-        phase: TimerPhase.WORK,
-        timeRemaining: config.workTime,
-        currentRound: current.currentRound + 1,
-        currentExercise: intervalCuePlan.currentExercise,
-        cuePlan: intervalCuePlan.cuePlan,
-        announcement: intervalCuePlan.announcement,
-        shouldFinish: false,
-      };
-    }
-
-    if (config.coolDownTime > 0) {
-      return {
-        phase: TimerPhase.COOL_DOWN,
-        timeRemaining: config.coolDownTime,
-        currentRound: current.currentRound,
-        currentExercise: '',
-        cuePlan: [],
-        announcement: 'Cool down',
-        shouldFinish: false,
-      };
-    }
-
-    return {
-      phase: TimerPhase.FINISHED,
-      timeRemaining: 0,
-      currentRound: current.currentRound,
-      currentExercise: '',
-      cuePlan: [],
-      announcement: 'Workout complete',
-      shouldFinish: true,
-    };
-  }
-
-  if (current.phase === TimerPhase.COOL_DOWN) {
-    return {
-      phase: TimerPhase.FINISHED,
-      timeRemaining: 0,
-      currentRound: current.currentRound,
-      currentExercise: '',
-      cuePlan: [],
-      announcement: 'Workout complete',
-      shouldFinish: true,
-    };
-  }
-
-  return {
-    ...current,
-    announcement: '',
-    shouldFinish: false,
-  };
-};
 
 export const useActiveTimerEngine = ({
   config,
@@ -158,8 +28,8 @@ export const useActiveTimerEngine = ({
   );
   const [isPaused, setIsPaused] = useState(false);
   const timerSnapshotRef = useRef(timerSnapshot);
-  const finishTimeoutRef = useRef<number | null>(null);
-  const cueTimeoutsRef = useRef<number[]>([]);
+  const finishTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cueTimeoutsRef = useRef<Array<ReturnType<typeof setTimeout>>>([]);
   const cueScheduleStartedAtRef = useRef<number | null>(null);
   const elapsedCueScheduleMsRef = useRef(0);
   const { phase, timeRemaining, currentRound, currentExercise } = timerSnapshot;
@@ -175,7 +45,7 @@ export const useActiveTimerEngine = ({
   }, [exercises]);
 
   const clearCueTimeouts = useCallback(() => {
-    cueTimeoutsRef.current.forEach((timeoutId) => window.clearTimeout(timeoutId));
+    cueTimeoutsRef.current.forEach((timeoutId) => clearTimeout(timeoutId));
     cueTimeoutsRef.current = [];
   }, []);
 
@@ -192,7 +62,7 @@ export const useActiveTimerEngine = ({
       cueTimeoutsRef.current = cuePlan
         .filter((cue) => cue.offsetMs > elapsedMs)
         .map((cue) =>
-          window.setTimeout(() => {
+          setTimeout(() => {
             if (timerSnapshotRef.current.phase !== TimerPhase.WORK) {
               return;
             }
@@ -220,7 +90,7 @@ export const useActiveTimerEngine = ({
   const startCuePlan = useCallback(
     (cuePlan: IntervalCue[]) => {
       elapsedCueScheduleMsRef.current = 0;
-      cueScheduleStartedAtRef.current = performance.now();
+      cueScheduleStartedAtRef.current = Date.now();
       scheduleCuePlan(cuePlan);
     },
     [scheduleCuePlan]
@@ -228,9 +98,9 @@ export const useActiveTimerEngine = ({
 
   const scheduleFinish = useCallback(() => {
     if (finishTimeoutRef.current) {
-      window.clearTimeout(finishTimeoutRef.current);
+      clearTimeout(finishTimeoutRef.current);
     }
-    finishTimeoutRef.current = window.setTimeout(onFinish, 3000);
+    finishTimeoutRef.current = setTimeout(onFinish, 3000);
   }, [onFinish]);
 
   const triggerPhaseTransition = useCallback(() => {
@@ -239,7 +109,7 @@ export const useActiveTimerEngine = ({
     }
 
     const next = getNextSnapshot(timerSnapshot, config, getRandomExercise, () =>
-      buildSaqCuePlan(exercises)
+      buildSaqPlanFromExercises(exercises)
     );
     setTimerSnapshot({
       phase: next.phase,
@@ -273,15 +143,12 @@ export const useActiveTimerEngine = ({
 
   const tick = useCallback(() => {
     if (isPaused) return;
-    setTimerSnapshot((prev) => ({
-      ...prev,
-      timeRemaining: prev.timeRemaining > 0 ? prev.timeRemaining - 1 : 0,
-    }));
+    setTimerSnapshot((prev) => decrementSnapshot(prev));
   }, [isPaused]);
 
   useEffect(() => {
-    const timerId = window.setInterval(tick, 1000);
-    return () => window.clearInterval(timerId);
+    const timerId = setInterval(tick, 1000);
+    return () => clearInterval(timerId);
   }, [tick]);
 
   useEffect(() => {
@@ -297,7 +164,7 @@ export const useActiveTimerEngine = ({
     return () => {
       resetCueSchedule();
       if (finishTimeoutRef.current) {
-        window.clearTimeout(finishTimeoutRef.current);
+        clearTimeout(finishTimeoutRef.current);
       }
     };
   }, [resetCueSchedule]);
@@ -309,12 +176,12 @@ export const useActiveTimerEngine = ({
       if (phase === TimerPhase.WORK && timerSnapshot.cuePlan.length > 0) {
         if (nextPaused) {
           if (cueScheduleStartedAtRef.current !== null) {
-            elapsedCueScheduleMsRef.current += performance.now() - cueScheduleStartedAtRef.current;
+            elapsedCueScheduleMsRef.current += Date.now() - cueScheduleStartedAtRef.current;
           }
           cueScheduleStartedAtRef.current = null;
           clearCueTimeouts();
         } else {
-          cueScheduleStartedAtRef.current = performance.now();
+          cueScheduleStartedAtRef.current = Date.now();
           scheduleCuePlan(timerSnapshot.cuePlan, elapsedCueScheduleMsRef.current);
         }
       }

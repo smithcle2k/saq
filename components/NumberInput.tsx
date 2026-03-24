@@ -1,5 +1,15 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Plus, Minus } from 'lucide-react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import {
+  NativeSyntheticEvent,
+  StyleSheet,
+  Text,
+  TextInput,
+  TextInputKeyPressEventData,
+  View,
+  Pressable,
+} from 'react-native';
+import { colors, fonts } from '../theme';
 import { formatTime } from '../utils/timeUtils';
 
 interface NumberInputProps {
@@ -24,11 +34,10 @@ export const NumberInput: React.FC<NumberInputProps> = ({
   readOnly = false,
 }) => {
   const formatValue = useCallback((v: number) => (isTime ? formatTime(v) : v.toString()), [isTime]);
-
   const [localValue, setLocalValue] = useState(formatValue(value));
-  const inputRef = useRef<HTMLInputElement>(null);
-  const longPressTimerRef = useRef<number | null>(null);
-  const longPressIntervalRef = useRef<number | null>(null);
+  const inputRef = useRef<TextInput>(null);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     setLocalValue(formatValue(value));
@@ -56,12 +65,14 @@ export const NumberInput: React.FC<NumberInputProps> = ({
 
   const handleBlur = () => parseAndCommit(localValue);
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') inputRef.current?.blur();
+  const handleKeyDown = (event: NativeSyntheticEvent<TextInputKeyPressEventData>) => {
+    if (event.nativeEvent.key === 'Enter') inputRef.current?.blur();
   };
 
   const handleFocus = () => {
-    if (!readOnly) setTimeout(() => inputRef.current?.select(), 0);
+    if (!readOnly) {
+      setTimeout(() => inputRef.current?.focus(), 0);
+    }
   };
 
   const handleIncrement = useCallback(() => {
@@ -77,8 +88,8 @@ export const NumberInput: React.FC<NumberInputProps> = ({
   }, [readOnly, value, step, min, onChange]);
 
   const startLongPress = useCallback((action: () => void) => {
-    longPressTimerRef.current = window.setTimeout(() => {
-      longPressIntervalRef.current = window.setInterval(() => {
+    longPressTimerRef.current = setTimeout(() => {
+      longPressIntervalRef.current = setInterval(() => {
         action();
       }, 80);
     }, 400);
@@ -102,72 +113,138 @@ export const NumberInput: React.FC<NumberInputProps> = ({
   }, [stopLongPress]);
 
   return (
-    <div className="glass-panel overflow-hidden rounded-2xl group transition-all hover:border-primary/20">
-      <div className="flex items-stretch">
-        {/* Label */}
-        <div className="bg-black/20 px-4 py-4 flex items-center min-w-[90px] border-r border-white/5 transition-colors group-hover:bg-black/30">
-          <span className="text-primary text-sm font-semibold tracking-wider uppercase">
-            {label}
-          </span>
-        </div>
+    <View style={styles.card}>
+      <View style={styles.labelWrap}>
+        <Text style={styles.label}>{label}</Text>
+      </View>
 
-        {/* Value */}
-        <div className="flex-1 flex items-center justify-center px-4 py-4 relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+      <View style={styles.valueWrap}>
+        <View style={styles.valueGlow} />
+        <View style={styles.valueInner}>
           {readOnly ? (
-            <span className="text-on-surface font-mono text-xl font-bold tracking-tight relative z-10">
-              {localValue}
-            </span>
+            <Text style={styles.valueText}>{localValue}</Text>
           ) : (
-            <input
+            <TextInput
               ref={inputRef}
-              type="text"
               value={localValue}
-              onChange={(e) => setLocalValue(e.target.value)}
+              onChangeText={setLocalValue}
               onBlur={handleBlur}
               onFocus={handleFocus}
-              onKeyDown={handleKeyDown}
-              className="w-full text-center text-on-surface font-mono text-xl font-bold tracking-tight bg-transparent outline-none relative z-10 transition-colors focus:text-primary"
-              aria-label={`Enter ${label}`}
+              onKeyPress={handleKeyDown}
+              style={styles.input}
+              keyboardType={isTime ? 'numbers-and-punctuation' : 'number-pad'}
+              returnKeyType="done"
+              selectionColor={colors.primary}
+              accessible
+              accessibilityLabel={`Enter ${label}`}
             />
           )}
-        </div>
+        </View>
+      </View>
 
-        {/* Buttons */}
-        {!readOnly && (
-          <div className="flex items-stretch border-l border-white/5">
-            <button
-              onClick={handleDecrement}
-              onMouseDown={() => startLongPress(handleDecrement)}
-              onMouseUp={stopLongPress}
-              onMouseLeave={stopLongPress}
-              onTouchStart={() => startLongPress(handleDecrement)}
-              onTouchEnd={stopLongPress}
-              className="w-14 flex items-center justify-center bg-black/10 text-on-surface-variant hover:bg-black/30 hover:text-primary active:bg-black/50 transition-all touch-manipulation"
-              aria-label={`Decrease ${label}`}
-              tabIndex={-1}
-            >
-              <Minus size={20} />
-            </button>
-            <div className="w-px bg-white/5" />
-            <button
-              onClick={handleIncrement}
-              onMouseDown={() => startLongPress(handleIncrement)}
-              onMouseUp={stopLongPress}
-              onMouseLeave={stopLongPress}
-              onTouchStart={() => startLongPress(handleIncrement)}
-              onTouchEnd={stopLongPress}
-              className="w-14 flex items-center justify-center bg-black/10 text-on-surface-variant hover:bg-black/30 hover:text-primary active:bg-black/50 transition-all touch-manipulation"
-              aria-label={`Increase ${label}`}
-              tabIndex={-1}
-            >
-              <Plus size={20} />
-            </button>
-          </div>
-        )}
-
-        {readOnly && <div className="w-[113px] bg-black/10 border-l border-white/5" />}
-      </div>
-    </div>
+      {readOnly ? (
+        <View style={styles.readOnlySpacer} />
+      ) : (
+        <View style={styles.controls}>
+          <Pressable
+            onPress={handleDecrement}
+            onPressIn={() => startLongPress(handleDecrement)}
+            onPressOut={stopLongPress}
+            style={({ pressed }) => [styles.controlButton, pressed && styles.controlButtonPressed]}
+            accessibilityRole="button"
+            accessibilityLabel={`Decrease ${label}`}
+          >
+            <Ionicons name="remove" size={20} color={colors.onSurfaceVariant} />
+          </Pressable>
+          <View style={styles.controlDivider} />
+          <Pressable
+            onPress={handleIncrement}
+            onPressIn={() => startLongPress(handleIncrement)}
+            onPressOut={stopLongPress}
+            style={({ pressed }) => [styles.controlButton, pressed && styles.controlButtonPressed]}
+            accessibilityRole="button"
+            accessibilityLabel={`Increase ${label}`}
+          >
+            <Ionicons name="add" size={20} color={colors.onSurfaceVariant} />
+          </Pressable>
+        </View>
+      )}
+    </View>
   );
 };
+
+const styles = StyleSheet.create({
+  card: {
+    minHeight: 72,
+    flexDirection: 'row',
+    overflow: 'hidden',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.outline,
+    backgroundColor: colors.surfaceCard,
+  },
+  labelWrap: {
+    minWidth: 94,
+    justifyContent: 'center',
+    borderRightWidth: 1,
+    borderRightColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    paddingHorizontal: 16,
+  },
+  label: {
+    color: colors.primary,
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 13,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+  },
+  valueWrap: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  valueGlow: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,240,255,0.04)',
+  },
+  valueInner: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  valueText: {
+    color: colors.onSurface,
+    fontFamily: fonts.monoBold,
+    fontSize: 22,
+  },
+  input: {
+    width: '100%',
+    color: colors.onSurface,
+    textAlign: 'center',
+    fontFamily: fonts.monoBold,
+    fontSize: 22,
+  },
+  controls: {
+    flexDirection: 'row',
+    borderLeftWidth: 1,
+    borderLeftColor: 'rgba(255,255,255,0.05)',
+  },
+  controlButton: {
+    width: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.12)',
+  },
+  controlButtonPressed: {
+    backgroundColor: 'rgba(0,0,0,0.3)',
+  },
+  controlDivider: {
+    width: 1,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+  },
+  readOnlySpacer: {
+    width: 113,
+    borderLeftWidth: 1,
+    borderLeftColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: 'rgba(0,0,0,0.12)',
+  },
+});
