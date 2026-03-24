@@ -23,30 +23,21 @@ describe('buildSaqCuePlan', () => {
     expect(cuePlan[3].label).not.toBe(cuePlan[4].label);
   });
 
-  it('falls back to default cues when no custom exercise list exists', () => {
+  it('falls back to SAQ default cues when no custom exercise list exists', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0);
 
     const cuePlan = buildSaqCuePlan([]);
 
     expect(cuePlan).toHaveLength(5);
-    expect(cuePlan[0].label).toBe('Left');
+    expect(cuePlan[0].label).toBe('Forward');
   });
 
-  it('drops Straight from the stock default cue pool in SAQ mode', () => {
+  it('uses custom cues as-is when a non-empty list is provided', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0);
 
-    const cuePlan = buildSaqCuePlan(['Straight', 'Left', 'Right', 'Come Back']);
+    const cuePlan = buildSaqCuePlan(['Hop', 'Skip', 'Jump']);
 
     expect(cuePlan).toHaveLength(5);
-    expect(cuePlan.every((cue) => cue.label !== 'Straight')).toBe(true);
-  });
-
-  it('uses the updated stock default cue pool when the current default list is provided', () => {
-    vi.spyOn(Math, 'random').mockReturnValue(0);
-
-    const cuePlan = buildSaqCuePlan(['Left', 'Right', 'Come Back']);
-
-    expect(cuePlan).toHaveLength(5);
-    expect(cuePlan.every((cue) => cue.label !== 'Straight')).toBe(true);
+    expect(['Hop', 'Skip', 'Jump']).toContain(cuePlan[0].label);
   });
 });

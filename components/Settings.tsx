@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { Reorder, useDragControls } from 'framer-motion';
 import { ArrowLeft, Plus, Trash2, GripVertical, RotateCcw } from 'lucide-react';
-import { DEFAULT_CUES } from '../utils/defaultCues';
+import { DEFAULT_CUES, SAQ_DEFAULT_CUES } from '../utils/defaultCues';
 import { validateCueLabel } from '../utils/cueModeration';
+import { TimerMode } from '../types';
 
 interface SettingsProps {
   exercises: string[];
   setExercises: React.Dispatch<React.SetStateAction<string[]>>;
+  mode: TimerMode;
   onClose: () => void;
 }
 
@@ -46,7 +48,7 @@ const ExerciseItem: React.FC<ExerciseItemProps> = ({ exercise, onRemove }) => {
   );
 };
 
-export const Settings: React.FC<SettingsProps> = ({ exercises, setExercises, onClose }) => {
+export const Settings: React.FC<SettingsProps> = ({ exercises, setExercises, mode, onClose }) => {
   const [newExercise, setNewExercise] = useState('');
   const [inputError, setInputError] = useState('');
 
@@ -79,7 +81,7 @@ export const Settings: React.FC<SettingsProps> = ({ exercises, setExercises, onC
   };
 
   const handleReset = () => {
-    setExercises(DEFAULT_CUES);
+    setExercises(mode === 'SAQ' ? SAQ_DEFAULT_CUES : DEFAULT_CUES);
   };
 
   return (
@@ -97,40 +99,42 @@ export const Settings: React.FC<SettingsProps> = ({ exercises, setExercises, onC
       </div>
 
       {/* Add Exercise */}
-      <div className="mb-6 glass-panel p-5 rounded-2xl">
-        <p className="text-xs font-semibold tracking-wider text-primary uppercase mb-3">
-          Add new cue
-        </p>
-        <div className="flex gap-3">
-          <input
-            type="text"
-            value={newExercise}
-            onChange={(e) => {
-              setNewExercise(e.target.value);
-              if (inputError) {
-                setInputError('');
-              }
-            }}
-            onKeyDown={handleKeyDown}
-            placeholder="e.g. Shuffle left"
-            aria-invalid={inputError ? 'true' : 'false'}
-            aria-describedby={inputError ? 'cue-input-error' : undefined}
-            className="flex-1 bg-black/20 text-on-surface px-4 py-3.5 rounded-xl border border-white/5 focus:outline-none focus:border-primary focus:shadow-[0_0_15px_rgba(0,240,255,0.2)] transition-all font-medium placeholder:text-on-surface-variant/40"
-          />
-          <button
-            onClick={handleAdd}
-            disabled={!newExercise.trim()}
-            className="bg-primary/20 text-primary border border-primary/40 px-4 rounded-xl disabled:opacity-30 disabled:border-transparent transition-all hover:bg-primary/30 hover:shadow-[0_0_15px_rgba(0,240,255,0.3)] flex items-center justify-center cursor-pointer"
-          >
-            <Plus size={24} />
-          </button>
-        </div>
-        {inputError ? (
-          <p id="cue-input-error" className="mt-3 text-sm font-medium text-phase-rest-DEFAULT">
-            {inputError}
+      {mode !== 'SAQ' && (
+        <div className="mb-6 glass-panel p-5 rounded-2xl">
+          <p className="text-xs font-semibold tracking-wider text-primary uppercase mb-3">
+            Add new cue
           </p>
-        ) : null}
-      </div>
+          <div className="flex gap-3">
+            <input
+              type="text"
+              value={newExercise}
+              onChange={(e) => {
+                setNewExercise(e.target.value);
+                if (inputError) {
+                  setInputError('');
+                }
+              }}
+              onKeyDown={handleKeyDown}
+              placeholder="e.g. Shuffle left"
+              aria-invalid={inputError ? 'true' : 'false'}
+              aria-describedby={inputError ? 'cue-input-error' : undefined}
+              className="flex-1 bg-black/20 text-on-surface px-4 py-3.5 rounded-xl border border-white/5 focus:outline-none focus:border-primary focus:shadow-[0_0_15px_rgba(0,240,255,0.2)] transition-all font-medium placeholder:text-on-surface-variant/40"
+            />
+            <button
+              onClick={handleAdd}
+              disabled={!newExercise.trim()}
+              className="bg-primary/20 text-primary border border-primary/40 px-4 rounded-xl disabled:opacity-30 disabled:border-transparent transition-all hover:bg-primary/30 hover:shadow-[0_0_15px_rgba(0,240,255,0.3)] flex items-center justify-center cursor-pointer"
+            >
+              <Plus size={24} />
+            </button>
+          </div>
+          {inputError ? (
+            <p id="cue-input-error" className="mt-3 text-sm font-medium text-phase-rest-DEFAULT">
+              {inputError}
+            </p>
+          ) : null}
+        </div>
+      )}
 
       {/* Exercise List */}
       <div className="flex-1 overflow-y-auto pr-1">

@@ -29,7 +29,8 @@ function App() {
 
   const mode = useStore((state) => state.mode);
   const modeConfigs = useStore((state) => state.modeConfigs);
-  const exercises = useStore((state) => state.exercises);
+  const exercisesByMode = useStore((state) => state.exercisesByMode);
+  const exercises = exercisesByMode[mode];
   const history = useStore((state) => state.history);
   const tutorialSeen = useStore((state) => state.tutorialSeen);
 
@@ -165,6 +166,7 @@ function App() {
             <Settings
               exercises={exercises}
               setExercises={setExercises}
+              mode={mode}
               onClose={handleCloseSubView}
             />
           </motion.div>

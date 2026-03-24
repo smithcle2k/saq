@@ -4,6 +4,7 @@ import { get, set, del } from 'idb-keyval';
 import { TimerConfig, TimerMode, WorkoutHistoryItem } from './types';
 import {
   DEFAULT_CUES,
+  SAQ_DEFAULT_CUES,
   LEGACY_DEFAULT_CUES,
   PREVIOUS_DEFAULT_CUES,
   matchesCueList,
@@ -28,6 +29,7 @@ interface PersistedAppState {
   mode?: TimerMode;
   modeConfigs?: Partial<Record<TimerMode, Partial<Omit<TimerConfig, 'mode'>>>>;
   exercises?: string[];
+  exercisesByMode?: Partial<Record<TimerMode, string[]>>;
   history?: WorkoutHistoryItem[];
   tutorialSeen?: boolean;
 }
@@ -35,7 +37,7 @@ interface PersistedAppState {
 interface AppState {
   mode: TimerMode;
   modeConfigs: ModeConfigMap;
-  exercises: string[];
+  exercisesByMode: Record<TimerMode, string[]>;
   history: WorkoutHistoryItem[];
   tutorialSeen: boolean;
 
@@ -94,7 +96,7 @@ export const useStore = create<AppState>()(
     (set) => ({
       mode: 'INTERVAL',
       modeConfigs: DEFAULT_CONFIGS,
-      exercises: DEFAULT_CUES,
+      exercisesByMode: { INTERVAL: DEFAULT_CUES, SAQ: SAQ_DEFAULT_CUES },
       history: [],
       tutorialSeen: false,
 
@@ -111,9 +113,11 @@ export const useStore = create<AppState>()(
           },
         })),
       setExercises: (updater) =>
-        set((state) => ({
-          exercises: typeof updater === 'function' ? updater(state.exercises) : updater,
-        })),
+        set((state) => {
+          const current = state.exercisesByMode[state.mode];
+          const next = typeof updater === 'function' ? updater(current) : updater;
+          return { exercisesByMode: { ...state.exercisesByMode, [state.mode]: next } };
+        }),
       addHistoryItem: (item) =>
         set((state) => ({
           history: [item, ...state.history],
@@ -123,22 +127,29 @@ export const useStore = create<AppState>()(
     }),
     {
       name: 'interval-trainer-storage',
-      version: 8,
+      version: 9,
       storage: createJSONStorage(() => idbStorage),
       migrate: (persistedState: unknown, version) => {
         const state = (persistedState ?? {}) as PersistedAppState;
         const modeConfigs = state.modeConfigs ?? {};
-        const exercises =
+
+        const legacyExercises = state.exercises;
+        const intervalExercises =
           (version < 4 &&
-            state.exercises &&
-            matchesCueList(state.exercises, LEGACY_DEFAULT_CUES)) ||
-          (version < 7 && state.exercises && matchesCueList(state.exercises, PREVIOUS_DEFAULT_CUES))
+            legacyExercises &&
+            matchesCueList(legacyExercises, LEGACY_DEFAULT_CUES)) ||
+          (version < 7 && legacyExercises && matchesCueList(legacyExercises, PREVIOUS_DEFAULT_CUES))
             ? DEFAULT_CUES
-            : state.exercises;
+            : (legacyExercises ?? DEFAULT_CUES);
+
+        const exercisesByMode: Record<TimerMode, string[]> = {
+          INTERVAL: state.exercisesByMode?.INTERVAL ?? intervalExercises,
+          SAQ: SAQ_DEFAULT_CUES,
+        };
 
         return {
           ...state,
-          exercises,
+          exercisesByMode,
           modeConfigs: {
             INTERVAL: mergeModeConfig('INTERVAL', modeConfigs.INTERVAL, version),
             SAQ: mergeModeConfig('SAQ', modeConfigs.SAQ, version),

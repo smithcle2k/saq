@@ -1,6 +1,19 @@
 export const DEFAULT_CUES = ['Left', 'Right', 'Come Back'];
 export const PREVIOUS_DEFAULT_CUES = ['Straight', 'Left', 'Right', 'Come Back'];
-export const SAQ_DEFAULT_CUES = DEFAULT_CUES;
+export const PREVIOUS_SAQ_DEFAULT_CUES = DEFAULT_CUES;
+
+export const SAQ_DEFAULT_CUES = [
+  'Forward',
+  'Back',
+  'Shuffle Left',
+  'Shuffle Right',
+  'Jump Left',
+  'Jump Right',
+  'Jump Forward',
+  'Jump Back',
+  'Spin Right',
+  'Spin Left',
+];
 
 export const LEGACY_DEFAULT_CUES = ['Straight', 'Left', 'Right', 'Back', 'Turn around'];
 
