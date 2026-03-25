@@ -129,6 +129,8 @@ export const Settings: React.FC<SettingsProps> = ({ exercises, setExercises, mod
             onDragEnd={({ data: nextData }) => setExercises(nextData.map((item) => item.exercise))}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.listContent}
+            containerStyle={{ flex: 1 }}
+            style={{ flex: 1 }}
           />
         )}
       </View>
@@ -229,6 +231,7 @@ const styles = StyleSheet.create({
   },
   listWrap: {
     flex: 1,
+    overflow: 'hidden',
   },
   listContent: {
     gap: 12,
