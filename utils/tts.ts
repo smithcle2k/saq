@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import * as Speech from 'expo-speech';
 
 let voicesReadyPromise: Promise<void> | null = null;
@@ -7,6 +8,15 @@ let activeSpeechToken = 0;
 let isSpeechActive = false;
 let queuedSpeech: Array<{ text: string; afterPreviousEndMs: number }> = [];
 let delayedSpeechStartTimeoutId: ReturnType<typeof setTimeout> | null = null;
+
+const isAndroidChromeWeb = () => {
+  if (Platform.OS !== 'web' || typeof navigator === 'undefined') {
+    return false;
+  }
+
+  const userAgent = navigator.userAgent;
+  return /Android/i.test(userAgent) && /Chrome/i.test(userAgent);
+};
 
 export interface SpeakOptions {
   interrupt?: boolean;
@@ -52,6 +62,17 @@ const clearDelayedSpeechStart = () => {
   }
 };
 
+const createSpeechOptions = (handleDone?: () => void) => ({
+  rate: 1,
+  pitch: 1,
+  volume: 1,
+  language: 'en-US',
+  voice: preferredVoice,
+  onDone: handleDone,
+  onError: handleDone,
+  onStopped: handleDone,
+});
+
 const processSpeechQueue = (afterPreviousUtteranceEnded = false) => {
   if (isSpeechActive || delayedSpeechStartTimeoutId !== null || queuedSpeech.length === 0) return;
   const nextSpeech = queuedSpeech.shift();
@@ -68,16 +89,7 @@ const processSpeechQueue = (afterPreviousUtteranceEnded = false) => {
       processSpeechQueue(true);
     };
 
-    Speech.speak(nextSpeech.text, {
-      rate: 1,
-      pitch: 1,
-      volume: 1,
-      language: 'en-US',
-      voice: preferredVoice,
-      onDone: handleDone,
-      onError: handleDone,
-      onStopped: handleDone,
-    });
+    Speech.speak(nextSpeech.text, createSpeechOptions(handleDone));
   };
 
   if (afterPreviousUtteranceEnded && nextSpeech.afterPreviousEndMs > 0) {
@@ -101,6 +113,13 @@ const speakNow = async (text: string, interrupt: boolean, afterPreviousEndMs: nu
     if (hasQueuedSpeech || hasActiveSpeech) {
       await Speech.stop();
     }
+  }
+
+  // Android Chrome already queues browser speech internally; waiting for
+  // expo-speech's completion callback there adds an extra pause between cues.
+  if (isAndroidChromeWeb()) {
+    Speech.speak(text, createSpeechOptions());
+    return;
   }
 
   queuedSpeech.push({ text, afterPreviousEndMs });

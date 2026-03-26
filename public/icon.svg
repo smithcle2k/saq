@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00f2fe;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#4facfe;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ff0844;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#ffb199;stop-opacity:1" />
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="8" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="512" height="512" rx="114" fill="#030305" />
+  
+  <!-- Outer Stopwatch Ring -->
+  <circle cx="256" cy="276" r="160" fill="none" stroke="url(#grad1)" stroke-width="24" filter="url(#glow)"/>
+  
+  <!-- Inner Stopwatch Track -->
+  <circle cx="256" cy="276" r="120" fill="none" stroke="#ffffff" stroke-width="8" stroke-dasharray="10, 20" opacity="0.4"/>
+  
+  <!-- Stopwatch Top Button -->
+  <rect x="232" y="56" width="48" height="40" rx="12" fill="url(#grad2)" filter="url(#glow)"/>
+  <rect x="208" y="40" width="96" height="24" rx="8" fill="#ffffff" opacity="0.9"/>
+  
+  <!-- Diagonal Stopwatch Buttons -->
+  <rect x="368" y="104" width="48" height="24" rx="8" transform="rotate(45 368 104)" fill="#4facfe" />
+  
+  <!-- Center Play Button / Tick -->
+  <path d="M220 216 L316 276 L220 336 Z" fill="url(#grad1)" filter="url(#glow)"/>
+</svg>
