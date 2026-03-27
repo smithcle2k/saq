@@ -9,7 +9,7 @@ let isSpeechActive = false;
 let queuedSpeech: Array<{ text: string; afterPreviousEndMs: number }> = [];
 let delayedSpeechStartTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
-const isAndroidChromeWeb = () => {
+export const isAndroidChromeWeb = () => {
   if (Platform.OS !== 'web' || typeof navigator === 'undefined') {
     return false;
   }

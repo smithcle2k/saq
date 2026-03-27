@@ -92,17 +92,16 @@ export const ActiveTimer: React.FC<ActiveTimerProps> = ({
   const hasAnnouncedPrepRef = useRef(false);
   const hasAnnouncedRestFiveSecondsRef = useRef(false);
   const prevPhaseRef = useRef<TimerPhase | null>(null);
-  const { phase, timeRemaining, currentRound, currentExercise, isPaused, togglePause } =
-    useActiveTimerEngine({
-      config,
-      exercises,
-      onFinish,
-      onAnnounce: (message, options) =>
-        speak(message, {
-          interrupt: options?.interrupt ?? true,
-          afterPreviousEndMs: options?.afterPreviousEndMs ?? 0,
-        }),
-    });
+  const { phase, timeRemaining, currentRound, isPaused, togglePause } = useActiveTimerEngine({
+    config,
+    exercises,
+    onFinish,
+    onAnnounce: (message, options) =>
+      speak(message, {
+        interrupt: options?.interrupt ?? true,
+        afterPreviousEndMs: options?.afterPreviousEndMs ?? 0,
+      }),
+  });
 
   useEffect(() => {
     if (hasAnnouncedPrepRef.current) return;
@@ -216,11 +215,9 @@ export const ActiveTimer: React.FC<ActiveTimerProps> = ({
                 {formatTime(timeRemaining)}
               </Text>
 
-              {phase === TimerPhase.WORK ? (
-                <Text style={styles.exerciseText}>{currentExercise || 'Move'}</Text>
-              ) : (
+              {phase !== TimerPhase.WORK ? (
                 <Text style={styles.helperText}>{helperText}</Text>
-              )}
+              ) : null}
 
               <RoundDots currentRound={currentRound} totalRounds={config.rounds} />
             </>

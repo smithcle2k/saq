@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { SpeakOptions } from '../utils/tts';
+import { isAndroidChromeWeb, type SpeakOptions } from '../utils/tts';
 import { TimerConfig, TimerPhase } from '../types';
 import {
   buildSaqPlanFromExercises,
@@ -8,7 +8,7 @@ import {
   getNextSnapshot,
   TimerSnapshot,
 } from '../utils/timerEngine';
-import { IntervalCue } from '../utils/intervalCuePlan';
+import { IntervalCue, optimizeIntervalCuePlanForAndroidChrome } from '../utils/intervalCuePlan';
 
 interface UseActiveTimerEngineParams {
   config: TimerConfig;
@@ -32,7 +32,7 @@ export const useActiveTimerEngine = ({
   const cueTimeoutsRef = useRef<Array<ReturnType<typeof setTimeout>>>([]);
   const cueScheduleStartedAtRef = useRef<number | null>(null);
   const elapsedCueScheduleMsRef = useRef(0);
-  const { phase, timeRemaining, currentRound, currentExercise } = timerSnapshot;
+  const { phase, timeRemaining, currentRound } = timerSnapshot;
 
   useEffect(() => {
     timerSnapshotRef.current = timerSnapshot;
@@ -57,9 +57,13 @@ export const useActiveTimerEngine = ({
 
   const scheduleCuePlan = useCallback(
     (cuePlan: IntervalCue[], elapsedMs = 0) => {
+      const normalizedCuePlan = isAndroidChromeWeb()
+        ? optimizeIntervalCuePlanForAndroidChrome(cuePlan)
+        : cuePlan;
+
       clearCueTimeouts();
 
-      cueTimeoutsRef.current = cuePlan
+      cueTimeoutsRef.current = normalizedCuePlan
         .filter((cue) => cue.offsetMs > elapsedMs)
         .map((cue) =>
           setTimeout(() => {
@@ -67,20 +71,12 @@ export const useActiveTimerEngine = ({
               return;
             }
 
-            setTimerSnapshot((prev) => {
-              if (prev.phase !== TimerPhase.WORK) {
-                return prev;
-              }
-
-              return {
-                ...prev,
-                currentExercise: cue.label,
-              };
-            });
-            onAnnounce(cue.label, {
-              interrupt: cue.interrupt ?? true,
-              afterPreviousEndMs: cue.afterPreviousEndMs,
-            });
+            if (cue.speak ?? true) {
+              onAnnounce(cue.announcement ?? cue.label, {
+                interrupt: cue.interrupt ?? true,
+                afterPreviousEndMs: cue.afterPreviousEndMs,
+              });
+            }
           }, cue.offsetMs - elapsedMs)
         );
     },
@@ -194,7 +190,6 @@ export const useActiveTimerEngine = ({
     phase,
     timeRemaining,
     currentRound,
-    currentExercise,
     cuePlan: timerSnapshot.cuePlan,
     isPaused,
     togglePause,
