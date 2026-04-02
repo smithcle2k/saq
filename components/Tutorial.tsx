@@ -19,15 +19,15 @@ const sections: Section[] = [
   },
   {
     heading: 'Interval Mode vs SAQ Mode',
-    body: 'Interval Mode is the classic round-based timer. It calls a single cue at the start of the work phase. SAQ (Speed, Agility, Quickness) Mode is built for reactive change-of-direction work. Each 5-second work round now fires five randomized cues: one at the start, then one each at 00:01, 00:02, 00:03, and 00:04.',
+    body: 'Interval Mode is the classic round-based timer. Each work round you hear one cue at random—Left, Right, Run, or Come Back. SAQ (Speed, Agility, Quickness) Mode is built for reactive change-of-direction work. Each 5-second work round fires five randomized cues: one at the start, then one each at 00:01, 00:02, 00:03, and 00:04.',
   },
   {
     heading: 'Setting up your workout',
-    body: 'Use the − and + buttons to set your Prep, Work, Rest, and Cool Down times, as well as the number of rounds. In Interval mode, you can also turn Add Break on or off. When Add Break is on, you will hear Break and then a random exercise. In SAQ mode, the work time is fixed at 5 seconds, but you can freely customize your rest time (minimum 15s) and the number of rounds to whatever you want.',
+    body: 'Use the − and + buttons to set your Prep, Work, Rest, and Cool Down times, as well as the number of rounds. In Interval mode, work time defaults to 3 seconds and is adjustable like the other phases. In SAQ mode, the work time is fixed at 5 seconds, but you can freely customize your rest time (minimum 15s) and the number of rounds to whatever you want.',
   },
   {
     heading: 'Customizing Cues',
-    body: 'Open Settings (the gear icon) to manage your cue list. You can add custom directions or movements, delete ones you no longer want, and reorder them anytime.',
+    body: 'In SAQ mode, open Settings (the gear icon) to manage your cue list: add custom directions or movements, delete ones you no longer want, and reorder them anytime. Interval mode uses a fixed built-in set of single-word cues (see Settings).',
   },
   {
     heading: 'During a workout',

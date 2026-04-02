@@ -29,6 +29,7 @@ import { Statistics } from './components/Statistics';
 import { Tutorial } from './components/Tutorial';
 import { gradients, colors } from './theme';
 import { calculateTotalTime } from './utils/timeUtils';
+import { DEFAULT_CUES } from './utils/defaultCues';
 import { initializeSpeech } from './utils/tts';
 import { useAudioCues } from './utils/audioCues';
 import { useStore } from './store';
@@ -73,7 +74,7 @@ function App() {
   const mode = useStore((state) => state.mode);
   const modeConfigs = useStore((state) => state.modeConfigs);
   const exercisesByMode = useStore((state) => state.exercisesByMode);
-  const exercises = exercisesByMode[mode];
+  const exercises = mode === 'INTERVAL' ? DEFAULT_CUES : exercisesByMode[mode];
   const history = useStore((state) => state.history);
   const tutorialSeen = useStore((state) => state.tutorialSeen);
   const setMode = useStore((state) => state.setMode);
@@ -132,7 +133,6 @@ function App() {
         restTime: nextConfig.restTime,
         rounds: nextConfig.rounds,
         coolDownTime: nextConfig.coolDownTime,
-        slowMode: nextConfig.slowMode,
       };
 
       return {

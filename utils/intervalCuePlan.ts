@@ -1,3 +1,5 @@
+import { INTERVAL_SINGLE_CUES } from './defaultCues.ts';
+
 export interface IntervalCue {
   id: number;
   label: string;
@@ -14,69 +16,26 @@ interface IntervalCuePlan {
   cuePlan: IntervalCue[];
 }
 
-const BREAK_MIN_OFFSET_MS = 300;
-const BREAK_MAX_OFFSET_MS = 2800;
-const EXERCISE_AFTER_BREAK_DELAY_MS = 50;
-const ANDROID_CHROME_SPEECH_COMBINE_WINDOW_MS = 150;
-
-const getRandomBreakOffsetMs = () =>
-  BREAK_MIN_OFFSET_MS + Math.round(Math.random() * (BREAK_MAX_OFFSET_MS - BREAK_MIN_OFFSET_MS));
-
-export const buildIntervalCuePlan = (exercise: string, slowMode: boolean): IntervalCuePlan => {
-  if (!slowMode) {
-    return {
-      announcement: `Go. ${exercise}`,
-      currentExercise: exercise,
-      cuePlan: [],
-    };
-  }
-
-  const breakOffsetMs = getRandomBreakOffsetMs();
-
-  return {
-    announcement: 'Go',
-    currentExercise: 'Go',
-    cuePlan: [
-      { id: 1, label: 'Break', offsetMs: breakOffsetMs, interrupt: false },
-      {
-        id: 2,
-        label: exercise,
-        offsetMs: breakOffsetMs + EXERCISE_AFTER_BREAK_DELAY_MS,
-        interrupt: false,
-        afterPreviousEndMs: EXERCISE_AFTER_BREAK_DELAY_MS,
-      },
-    ],
-  };
+const pickRandomIntervalCue = () => {
+  const i = Math.floor(Math.random() * INTERVAL_SINGLE_CUES.length);
+  return INTERVAL_SINGLE_CUES[i] ?? 'Left';
 };
 
-export const optimizeIntervalCuePlanForAndroidChrome = (cuePlan: IntervalCue[]): IntervalCue[] =>
-  cuePlan.map((cue, index) => {
-    const nextCue = cuePlan[index + 1];
-    const shouldCombineSpeech =
-      cue.label === 'Break' &&
-      cue.interrupt === false &&
-      nextCue?.interrupt === false &&
-      nextCue.offsetMs - cue.offsetMs <= ANDROID_CHROME_SPEECH_COMBINE_WINDOW_MS;
+const getRandomIntInclusive = (min: number, max: number) =>
+  min + Math.floor(Math.random() * (max - min + 1));
 
-    if (shouldCombineSpeech) {
-      return {
-        ...cue,
-        announcement: `${cue.label}. ${nextCue.label}`,
-        speak: true,
-      };
-    }
+const getIntervalCueOffsetMs = (cue: (typeof INTERVAL_SINGLE_CUES)[number]) => {
+  if (cue === 'Run') return 500;
+  if (cue === 'Come Back') return getRandomIntInclusive(2300, 2500);
+  return getRandomIntInclusive(1200, 2200);
+};
 
-    if (
-      index > 0 &&
-      cuePlan[index - 1]?.label === 'Break' &&
-      cue.interrupt === false &&
-      cue.offsetMs - cuePlan[index - 1].offsetMs <= ANDROID_CHROME_SPEECH_COMBINE_WINDOW_MS
-    ) {
-      return {
-        ...cue,
-        speak: false,
-      };
-    }
-
-    return cue;
-  });
+/** One random cue per work round. */
+export const buildIntervalCuePlan = (): IntervalCuePlan => {
+  const cue = pickRandomIntervalCue();
+  return {
+    announcement: 'Go',
+    currentExercise: cue,
+    cuePlan: [{ id: 1, label: cue, offsetMs: getIntervalCueOffsetMs(cue) }],
+  };
+};

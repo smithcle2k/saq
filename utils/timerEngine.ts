@@ -45,8 +45,7 @@ export const getNextSnapshot = (
       };
     }
 
-    const exercise = getRandomExercise();
-    const intervalPlan = buildIntervalCuePlan(exercise, config.slowMode);
+    const intervalPlan = buildIntervalCuePlan();
 
     return {
       phase: TimerPhase.WORK,
@@ -88,8 +87,7 @@ export const getNextSnapshot = (
         };
       }
 
-      const exercise = getRandomExercise();
-      const intervalPlan = buildIntervalCuePlan(exercise, config.slowMode);
+      const intervalPlan = buildIntervalCuePlan();
 
       return {
         phase: TimerPhase.WORK,

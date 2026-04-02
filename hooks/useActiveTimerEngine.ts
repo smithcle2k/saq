@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { isAndroidChromeWeb, type SpeakOptions } from '../utils/tts';
+import { type SpeakOptions } from '../utils/tts';
 import { TimerConfig, TimerPhase } from '../types';
 import {
   buildSaqPlanFromExercises,
@@ -8,7 +8,7 @@ import {
   getNextSnapshot,
   TimerSnapshot,
 } from '../utils/timerEngine';
-import { IntervalCue, optimizeIntervalCuePlanForAndroidChrome } from '../utils/intervalCuePlan';
+import { IntervalCue } from '../utils/intervalCuePlan';
 
 interface UseActiveTimerEngineParams {
   config: TimerConfig;
@@ -57,13 +57,9 @@ export const useActiveTimerEngine = ({
 
   const scheduleCuePlan = useCallback(
     (cuePlan: IntervalCue[], elapsedMs = 0) => {
-      const normalizedCuePlan = isAndroidChromeWeb()
-        ? optimizeIntervalCuePlanForAndroidChrome(cuePlan)
-        : cuePlan;
-
       clearCueTimeouts();
 
-      cueTimeoutsRef.current = normalizedCuePlan
+      cueTimeoutsRef.current = cuePlan
         .filter((cue) => cue.offsetMs > elapsedMs)
         .map((cue) =>
           setTimeout(() => {

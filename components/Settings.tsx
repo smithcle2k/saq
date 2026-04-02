@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import DraggableFlatList, { RenderItemParams } from 'react-native-draggable-flatlist';
 import { colors, fonts } from '../theme';
 import { DEFAULT_CUES, SAQ_DEFAULT_CUES } from '../utils/defaultCues';
@@ -14,6 +14,34 @@ interface SettingsProps {
   onClose: () => void;
 }
 
+const IntervalCuesReadOnly: React.FC<{ onClose: () => void }> = ({ onClose }) => (
+  <View style={styles.container}>
+    <View style={styles.header}>
+      <Pressable onPress={onClose} style={styles.backButton}>
+        <Ionicons name="arrow-back" size={22} color={colors.onSurface} />
+      </Pressable>
+      <Text style={styles.headerTitle}>CUES</Text>
+      <View style={styles.headerSpacer} />
+    </View>
+
+    <Text style={styles.intervalExplainer}>
+      Each work round calls out one cue at random: Left, Right, Run, or Come Back.
+    </Text>
+
+    <ScrollView
+      style={styles.listWrap}
+      contentContainerStyle={styles.listContent}
+      showsVerticalScrollIndicator={false}
+    >
+      {DEFAULT_CUES.map((cue) => (
+        <View key={cue} style={styles.itemCardReadOnly}>
+          <Text style={styles.itemLabelReadOnly}>{cue}</Text>
+        </View>
+      ))}
+    </ScrollView>
+  </View>
+);
+
 export const Settings: React.FC<SettingsProps> = ({ exercises, setExercises, mode, onClose }) => {
   const [newExercise, setNewExercise] = useState('');
   const [inputError, setInputError] = useState('');
@@ -21,6 +49,10 @@ export const Settings: React.FC<SettingsProps> = ({ exercises, setExercises, mod
     () => exercises.map((exercise, index) => ({ key: `${exercise}-${index}`, exercise })),
     [exercises]
   );
+
+  if (mode === 'INTERVAL') {
+    return <IntervalCuesReadOnly onClose={onClose} />;
+  }
 
   const handleAdd = () => {
     const candidate = newExercise.trim();
@@ -47,7 +79,7 @@ export const Settings: React.FC<SettingsProps> = ({ exercises, setExercises, mod
   };
 
   const handleReset = () => {
-    setExercises(mode === 'SAQ' ? SAQ_DEFAULT_CUES : DEFAULT_CUES);
+    setExercises(SAQ_DEFAULT_CUES);
   };
 
   const renderItem = ({
@@ -61,15 +93,13 @@ export const Settings: React.FC<SettingsProps> = ({ exercises, setExercises, mod
         <Ionicons name="reorder-three" size={24} color={colors.onSurfaceVariant} />
       </Pressable>
       <Text style={styles.itemLabel}>{item.exercise}</Text>
-      {mode !== 'SAQ' && (
-        <Pressable
-          onPress={() => handleRemove(getIndex() ?? 0)}
-          style={styles.deleteButton}
-          accessibilityLabel={`Delete ${item.exercise}`}
-        >
-          <Ionicons name="trash-outline" size={20} color={colors.onSurfaceVariant} />
-        </Pressable>
-      )}
+      <Pressable
+        onPress={() => handleRemove(getIndex() ?? 0)}
+        style={styles.deleteButton}
+        accessibilityLabel={`Delete ${item.exercise}`}
+      >
+        <Ionicons name="trash-outline" size={20} color={colors.onSurfaceVariant} />
+      </Pressable>
     </View>
   );
 
@@ -83,38 +113,36 @@ export const Settings: React.FC<SettingsProps> = ({ exercises, setExercises, mod
         <View style={styles.headerSpacer} />
       </View>
 
-      {mode !== 'SAQ' && (
-        <View style={styles.addCard}>
-          <Text style={styles.addLabel}>Add new cue</Text>
-          <View style={styles.addRow}>
-            <TextInput
-              value={newExercise}
-              onChangeText={(value) => {
-                setNewExercise(value);
-                if (inputError) setInputError('');
-              }}
-              onSubmitEditing={handleSubmitEditing}
-              placeholder="e.g. Shuffle left"
-              placeholderTextColor="rgba(148,163,184,0.4)"
-              style={styles.input}
-              returnKeyType="done"
-              accessibilityLabel="Cue label"
-            />
-            <Pressable
-              onPress={handleAdd}
-              disabled={!newExercise.trim()}
-              style={({ pressed }) => [
-                styles.addButton,
-                !newExercise.trim() && styles.addButtonDisabled,
-                pressed && styles.pressed,
-              ]}
-            >
-              <Ionicons name="add" size={24} color={colors.primary} />
-            </Pressable>
-          </View>
-          {inputError ? <Text style={styles.errorText}>{inputError}</Text> : null}
+      <View style={styles.addCard}>
+        <Text style={styles.addLabel}>Add new cue</Text>
+        <View style={styles.addRow}>
+          <TextInput
+            value={newExercise}
+            onChangeText={(value) => {
+              setNewExercise(value);
+              if (inputError) setInputError('');
+            }}
+            onSubmitEditing={handleSubmitEditing}
+            placeholder="e.g. Shuffle left"
+            placeholderTextColor="rgba(148,163,184,0.4)"
+            style={styles.input}
+            returnKeyType="done"
+            accessibilityLabel="Cue label"
+          />
+          <Pressable
+            onPress={handleAdd}
+            disabled={!newExercise.trim()}
+            style={({ pressed }) => [
+              styles.addButton,
+              !newExercise.trim() && styles.addButtonDisabled,
+              pressed && styles.pressed,
+            ]}
+          >
+            <Ionicons name="add" size={24} color={colors.primary} />
+          </Pressable>
         </View>
-      )}
+        {inputError ? <Text style={styles.errorText}>{inputError}</Text> : null}
+      </View>
 
       <View style={styles.listWrap}>
         {exercises.length === 0 ? (
@@ -178,6 +206,13 @@ const styles = StyleSheet.create({
   },
   headerSpacer: {
     width: 48,
+  },
+  intervalExplainer: {
+    color: colors.onSurfaceVariant,
+    fontFamily: fonts.sansMedium,
+    fontSize: 15,
+    lineHeight: 22,
+    marginBottom: 16,
   },
   addCard: {
     marginBottom: 16,
@@ -248,6 +283,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 16,
   },
+  itemCardReadOnly: {
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.outline,
+    backgroundColor: colors.surfaceCard,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+  },
   itemCardActive: {
     borderColor: 'rgba(0,240,255,0.35)',
     backgroundColor: 'rgba(0,240,255,0.12)',
@@ -257,6 +300,11 @@ const styles = StyleSheet.create({
   },
   itemLabel: {
     flex: 1,
+    color: colors.onSurface,
+    fontFamily: fonts.sansMedium,
+    fontSize: 18,
+  },
+  itemLabelReadOnly: {
     color: colors.onSurface,
     fontFamily: fonts.sansMedium,
     fontSize: 18,

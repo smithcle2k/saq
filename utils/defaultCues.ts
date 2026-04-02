@@ -1,4 +1,7 @@
-export const DEFAULT_CUES = ['Left', 'Right', 'Come Back'];
+/** Built-in interval work cues (one chosen at random each round). */
+export const INTERVAL_SINGLE_CUES = ['Left', 'Right', 'Run', 'Come Back'] as const;
+
+export const DEFAULT_CUES = [...INTERVAL_SINGLE_CUES];
 export const PREVIOUS_DEFAULT_CUES = ['Straight', 'Left', 'Right', 'Come Back'];
 export const PREVIOUS_SAQ_DEFAULT_CUES = DEFAULT_CUES;
 

@@ -2,13 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { TimerConfig, TimerMode, WorkoutHistoryItem } from './types';
-import {
-  DEFAULT_CUES,
-  SAQ_DEFAULT_CUES,
-  LEGACY_DEFAULT_CUES,
-  PREVIOUS_DEFAULT_CUES,
-  matchesCueList,
-} from './utils/defaultCues';
+import { DEFAULT_CUES, SAQ_DEFAULT_CUES } from './utils/defaultCues';
 
 type ModeConfigMap = Record<TimerMode, Omit<TimerConfig, 'mode'>>;
 
@@ -40,11 +34,10 @@ interface AppState {
 export const DEFAULT_CONFIGS: ModeConfigMap = {
   INTERVAL: {
     prepTime: 10,
-    workTime: 5,
+    workTime: 3,
     restTime: 55,
     rounds: 8,
     coolDownTime: 0,
-    slowMode: true,
   },
   SAQ: {
     prepTime: 10,
@@ -52,7 +45,6 @@ export const DEFAULT_CONFIGS: ModeConfigMap = {
     restTime: 55,
     rounds: 5,
     coolDownTime: 0,
-    slowMode: false,
   },
 };
 
@@ -73,6 +65,14 @@ const mergeModeConfig = (
 
   if (mode === 'SAQ' && version < 8) {
     nextConfig.workTime = 5;
+  }
+
+  if (version < 9) {
+    delete (nextConfig as { slowMode?: boolean }).slowMode;
+  }
+
+  if (mode === 'INTERVAL' && version < 11) {
+    nextConfig.workTime = 3;
   }
 
   return nextConfig;
@@ -101,9 +101,9 @@ export const useStore = create<AppState>()(
         })),
       setExercises: (updater) =>
         set((state) => {
-          const current = state.exercisesByMode[state.mode];
+          const current = state.exercisesByMode.SAQ;
           const next = typeof updater === 'function' ? updater(current) : updater;
-          return { exercisesByMode: { ...state.exercisesByMode, [state.mode]: next } };
+          return { exercisesByMode: { ...state.exercisesByMode, SAQ: next } };
         }),
       addHistoryItem: (item) =>
         set((state) => ({
@@ -114,24 +114,15 @@ export const useStore = create<AppState>()(
     }),
     {
       name: 'interval-trainer-storage',
-      version: 8,
+      version: 11,
       storage: createJSONStorage(() => AsyncStorage),
       migrate: (persistedState: unknown, version) => {
         const state = (persistedState ?? {}) as PersistedAppState;
         const modeConfigs = state.modeConfigs ?? {};
 
-        const legacyExercises = state.exercises;
-        const intervalExercises =
-          (version < 4 &&
-            legacyExercises &&
-            matchesCueList(legacyExercises, LEGACY_DEFAULT_CUES)) ||
-          (version < 7 && legacyExercises && matchesCueList(legacyExercises, PREVIOUS_DEFAULT_CUES))
-            ? DEFAULT_CUES
-            : (legacyExercises ?? DEFAULT_CUES);
-
         const exercisesByMode: Record<TimerMode, string[]> = {
-          INTERVAL: state.exercisesByMode?.INTERVAL ?? intervalExercises,
-          SAQ: SAQ_DEFAULT_CUES,
+          INTERVAL: DEFAULT_CUES,
+          SAQ: state.exercisesByMode?.SAQ ?? SAQ_DEFAULT_CUES,
         };
 
         return {

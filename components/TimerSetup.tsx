@@ -32,8 +32,8 @@ export const TimerSetup: React.FC<TimerSetupProps> = ({
     setConfig((prev) => ({ ...prev, [key]: value }));
   };
 
-  const isSaqMode = mode === 'SAQ';
   const totalDuration = calculateTotalTime(config);
+  const isSaqMode = mode === 'SAQ';
 
   return (
     <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -70,24 +70,6 @@ export const TimerSetup: React.FC<TimerSetupProps> = ({
         </Pressable>
       </View>
 
-      {!isSaqMode ? (
-        <Pressable
-          onPress={() => setConfig((prev) => ({ ...prev, slowMode: !prev.slowMode }))}
-          style={({ pressed }) => [
-            styles.slowModeCard,
-            config.slowMode ? styles.slowModeCardActive : null,
-            pressed && styles.pressed,
-          ]}
-        >
-          <View>
-            <Text style={styles.slowModeLabel}>Add Break</Text>
-          </View>
-          <View style={[styles.toggleTrack, config.slowMode ? styles.toggleTrackActive : null]}>
-            <View style={[styles.toggleThumb, config.slowMode ? styles.toggleThumbActive : null]} />
-          </View>
-        </Pressable>
-      ) : null}
-
       <View style={styles.inputs}>
         <NumberInput
           label="Prep"
@@ -100,8 +82,8 @@ export const TimerSetup: React.FC<TimerSetupProps> = ({
           label="Work"
           value={config.workTime}
           onChange={(v) => updateConfig('workTime', v)}
-          step={5}
-          min={5}
+          step={isSaqMode ? 5 : 1}
+          min={isSaqMode ? 5 : 3}
           readOnly
         />
         <NumberInput
@@ -143,12 +125,6 @@ export const TimerSetup: React.FC<TimerSetupProps> = ({
           <Text style={styles.sessionKey}>Rounds</Text>
           <Text style={styles.sessionValue}>{config.rounds}</Text>
         </View>
-        {!isSaqMode ? (
-          <View style={styles.sessionRow}>
-            <Text style={styles.sessionKey}>Add Break</Text>
-            <Text style={styles.sessionValue}>{config.slowMode ? 'ON' : 'OFF'}</Text>
-          </View>
-        ) : null}
         <View style={styles.sessionRowLast}>
           <Text style={styles.sessionKey}>Work / Rest</Text>
           <Text style={styles.sessionValue}>
@@ -246,47 +222,6 @@ const styles = StyleSheet.create({
   },
   modeLabelActive: {
     color: colors.primary,
-  },
-  slowModeCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: colors.outline,
-    backgroundColor: 'rgba(0,0,0,0.14)',
-    paddingHorizontal: 18,
-    paddingVertical: 18,
-  },
-  slowModeCardActive: {
-    borderColor: 'rgba(0,240,255,0.45)',
-    backgroundColor: 'rgba(0,240,255,0.12)',
-  },
-  slowModeLabel: {
-    color: colors.primary,
-    fontFamily: fonts.sansBold,
-    fontSize: 12,
-    letterSpacing: 2.4,
-    textTransform: 'uppercase',
-  },
-  toggleTrack: {
-    height: 28,
-    width: 48,
-    borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    padding: 3,
-  },
-  toggleTrackActive: {
-    backgroundColor: 'rgba(0,240,255,0.7)',
-  },
-  toggleThumb: {
-    height: 22,
-    width: 22,
-    borderRadius: 11,
-    backgroundColor: colors.onSurface,
-  },
-  toggleThumbActive: {
-    transform: [{ translateX: 20 }],
   },
   inputs: {
     gap: 12,
