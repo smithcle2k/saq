@@ -34,7 +34,7 @@ interface AppState {
 export const DEFAULT_CONFIGS: ModeConfigMap = {
   INTERVAL: {
     prepTime: 10,
-    workTime: 3,
+    workTime: 5,
     restTime: 55,
     rounds: 8,
     coolDownTime: 0,
@@ -72,7 +72,11 @@ const mergeModeConfig = (
   }
 
   if (mode === 'INTERVAL' && version < 11) {
-    nextConfig.workTime = 3;
+    nextConfig.workTime = 5;
+  }
+
+  if (mode === 'INTERVAL' && version === 11 && nextConfig.workTime === 3) {
+    nextConfig.workTime = 5;
   }
 
   return nextConfig;
@@ -114,7 +118,7 @@ export const useStore = create<AppState>()(
     }),
     {
       name: 'interval-trainer-storage',
-      version: 11,
+      version: 12,
       storage: createJSONStorage(() => AsyncStorage),
       migrate: (persistedState: unknown, version) => {
         const state = (persistedState ?? {}) as PersistedAppState;

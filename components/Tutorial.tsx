@@ -23,7 +23,7 @@ const sections: Section[] = [
   },
   {
     heading: 'Setting up your workout',
-    body: 'Use the − and + buttons to set your Prep, Work, Rest, and Cool Down times, as well as the number of rounds. In Interval mode, work time defaults to 3 seconds and is adjustable like the other phases. In SAQ mode, the work time is fixed at 5 seconds, but you can freely customize your rest time (minimum 15s) and the number of rounds to whatever you want.',
+    body: 'Use the − and + buttons to set your Prep, Work, Rest, and Cool Down times, as well as the number of rounds. In Interval mode, work time defaults to 5 seconds and is adjustable like the other phases. In SAQ mode, the work time is fixed at 5 seconds, but you can freely customize your rest time (minimum 15s) and the number of rounds to whatever you want.',
   },
   {
     heading: 'Customizing Cues',
