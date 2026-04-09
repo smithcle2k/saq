@@ -27,7 +27,7 @@ const sections: Section[] = [
   },
   {
     heading: 'Customizing Cues',
-    body: 'In SAQ mode, open Settings (the gear icon) to manage your cue list: add custom directions or movements, delete ones you no longer want, and reorder them anytime. Interval mode uses a fixed built-in set of single-word cues (see Settings).',
+    body: 'In SAQ mode, open Settings (the gear icon) to manage your cue list: add custom directions or movements, delete ones you no longer want, and reorder them anytime. In Interval mode, Settings lets you turn each built-in cue on or off (see Settings).',
   },
   {
     heading: 'During a workout',

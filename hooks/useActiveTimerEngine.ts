@@ -8,7 +8,7 @@ import {
   getNextSnapshot,
   TimerSnapshot,
 } from '../utils/timerEngine';
-import { IntervalCue } from '../utils/intervalCuePlan';
+import { buildIntervalCuePlan, IntervalCue } from '../utils/intervalCuePlan';
 
 interface UseActiveTimerEngineParams {
   config: TimerConfig;
@@ -43,6 +43,8 @@ export const useActiveTimerEngine = ({
     const randomIndex = Math.floor(Math.random() * exercises.length);
     return exercises[randomIndex];
   }, [exercises]);
+
+  const getIntervalPlan = useCallback(() => buildIntervalCuePlan(exercises), [exercises]);
 
   const clearCueTimeouts = useCallback(() => {
     cueTimeoutsRef.current.forEach((timeoutId) => clearTimeout(timeoutId));
@@ -100,8 +102,12 @@ export const useActiveTimerEngine = ({
       resetCueSchedule();
     }
 
-    const next = getNextSnapshot(timerSnapshot, config, getRandomExercise, () =>
-      buildSaqPlanFromExercises(exercises)
+    const next = getNextSnapshot(
+      timerSnapshot,
+      config,
+      getRandomExercise,
+      () => buildSaqPlanFromExercises(exercises),
+      getIntervalPlan
     );
     setTimerSnapshot({
       phase: next.phase,
@@ -131,6 +137,7 @@ export const useActiveTimerEngine = ({
     resetCueSchedule,
     startCuePlan,
     exercises,
+    getIntervalPlan,
   ]);
 
   const tick = useCallback(() => {

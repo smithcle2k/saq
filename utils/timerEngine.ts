@@ -1,4 +1,4 @@
-import { buildIntervalCuePlan, IntervalCue } from './intervalCuePlan';
+import { IntervalCue, IntervalCuePlan } from './intervalCuePlan';
 import { buildSaqCuePlan } from './saqCuePlan';
 import { TimerConfig, TimerPhase } from '../types';
 
@@ -27,7 +27,8 @@ export const getNextSnapshot = (
   current: TimerSnapshot,
   config: TimerConfig,
   getRandomExercise: () => string,
-  getSaqPlan: () => IntervalCue[]
+  getSaqPlan: () => IntervalCue[],
+  getIntervalPlan: () => IntervalCuePlan
 ): TransitionResult => {
   if (current.phase === TimerPhase.PREP) {
     if (config.mode === 'SAQ') {
@@ -45,7 +46,7 @@ export const getNextSnapshot = (
       };
     }
 
-    const intervalPlan = buildIntervalCuePlan();
+    const intervalPlan = getIntervalPlan();
 
     return {
       phase: TimerPhase.WORK,
@@ -87,7 +88,7 @@ export const getNextSnapshot = (
         };
       }
 
-      const intervalPlan = buildIntervalCuePlan();
+      const intervalPlan = getIntervalPlan();
 
       return {
         phase: TimerPhase.WORK,

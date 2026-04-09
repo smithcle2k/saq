@@ -1,4 +1,4 @@
-import { INTERVAL_SINGLE_CUES } from './defaultCues.ts';
+import { INTERVAL_SINGLE_CUES, normalizeIntervalEnabledCues } from './defaultCues.ts';
 
 export interface IntervalCue {
   id: number;
@@ -10,15 +10,15 @@ export interface IntervalCue {
   speak?: boolean;
 }
 
-interface IntervalCuePlan {
+export interface IntervalCuePlan {
   announcement: string;
   currentExercise: string;
   cuePlan: IntervalCue[];
 }
 
-const pickRandomIntervalCue = () => {
-  const i = Math.floor(Math.random() * INTERVAL_SINGLE_CUES.length);
-  return INTERVAL_SINGLE_CUES[i] ?? 'Left';
+const pickRandomIntervalCue = (pool: readonly string[]) => {
+  const i = Math.floor(Math.random() * pool.length);
+  return pool[i] ?? 'Left';
 };
 
 const getRandomIntInclusive = (min: number, max: number) =>
@@ -30,9 +30,10 @@ const getIntervalCueOffsetMs = (cue: (typeof INTERVAL_SINGLE_CUES)[number]) => {
   return getRandomIntInclusive(1200, 2200);
 };
 
-/** One random cue per work round. */
-export const buildIntervalCuePlan = (): IntervalCuePlan => {
-  const cue = pickRandomIntervalCue();
+/** One random cue per work round (chosen from enabled cues only). */
+export const buildIntervalCuePlan = (enabledCues: string[]): IntervalCuePlan => {
+  const pool = normalizeIntervalEnabledCues(enabledCues);
+  const cue = pickRandomIntervalCue(pool) as (typeof INTERVAL_SINGLE_CUES)[number];
   return {
     announcement: 'Go',
     currentExercise: cue,

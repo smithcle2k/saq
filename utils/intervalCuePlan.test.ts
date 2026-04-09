@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { buildIntervalCuePlan } from './intervalCuePlan.ts';
 import { INTERVAL_SINGLE_CUES } from './defaultCues.ts';
 
+const FULL_INTERVAL_POOL = [...INTERVAL_SINGLE_CUES];
+
 const withMockedRandom = (values: number[], run: () => void) => {
   const originalRandom = Math.random;
   let index = 0;
@@ -22,7 +24,7 @@ const withMockedRandom = (values: number[], run: () => void) => {
 
 test('interval work phase announces Go and schedules Run at 500ms', () => {
   withMockedRandom([0.6], () => {
-    const plan = buildIntervalCuePlan();
+    const plan = buildIntervalCuePlan(FULL_INTERVAL_POOL);
 
     assert.equal(plan.announcement, 'Go');
     assert.equal(plan.currentExercise, 'Run');
@@ -32,7 +34,7 @@ test('interval work phase announces Go and schedules Run at 500ms', () => {
 
 test('interval work phase schedules Left and Right inside the lateral timing bucket', () => {
   withMockedRandom([0, 0], () => {
-    const leftPlan = buildIntervalCuePlan();
+    const leftPlan = buildIntervalCuePlan(FULL_INTERVAL_POOL);
 
     assert.equal(leftPlan.announcement, 'Go');
     assert.equal(leftPlan.currentExercise, 'Left');
@@ -40,7 +42,7 @@ test('interval work phase schedules Left and Right inside the lateral timing buc
   });
 
   withMockedRandom([0.3, 0.9995], () => {
-    const rightPlan = buildIntervalCuePlan();
+    const rightPlan = buildIntervalCuePlan(FULL_INTERVAL_POOL);
 
     assert.equal(rightPlan.announcement, 'Go');
     assert.equal(rightPlan.currentExercise, 'Right');
@@ -50,7 +52,7 @@ test('interval work phase schedules Left and Right inside the lateral timing buc
 
 test('interval work phase schedules Come Back inside the comeback timing bucket', () => {
   withMockedRandom([0.9, 0], () => {
-    const minPlan = buildIntervalCuePlan();
+    const minPlan = buildIntervalCuePlan(FULL_INTERVAL_POOL);
 
     assert.equal(minPlan.announcement, 'Go');
     assert.equal(minPlan.currentExercise, 'Come Back');
@@ -58,7 +60,7 @@ test('interval work phase schedules Come Back inside the comeback timing bucket'
   });
 
   withMockedRandom([0.9, 0.999], () => {
-    const maxPlan = buildIntervalCuePlan();
+    const maxPlan = buildIntervalCuePlan(FULL_INTERVAL_POOL);
 
     assert.equal(maxPlan.announcement, 'Go');
     assert.equal(maxPlan.currentExercise, 'Come Back');
@@ -69,7 +71,7 @@ test('interval work phase schedules Come Back inside the comeback timing bucket'
 test('interval currentExercise always stays aligned with the selected cue', () => {
   INTERVAL_SINGLE_CUES.forEach((cue, index) => {
     withMockedRandom([(index + 0.1) / INTERVAL_SINGLE_CUES.length, 0.5], () => {
-      const plan = buildIntervalCuePlan();
+      const plan = buildIntervalCuePlan(FULL_INTERVAL_POOL);
       assert.equal(plan.currentExercise, cue);
       assert.equal(plan.cuePlan[0]?.label, cue);
     });

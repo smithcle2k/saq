@@ -1,5 +1,5 @@
 import 'react-native-gesture-handler';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
@@ -29,7 +29,6 @@ import { Statistics } from './components/Statistics';
 import { Tutorial } from './components/Tutorial';
 import { gradients, colors } from './theme';
 import { calculateTotalTime } from './utils/timeUtils';
-import { DEFAULT_CUES } from './utils/defaultCues';
 import { initializeSpeech } from './utils/tts';
 import { useAudioCues } from './utils/audioCues';
 import { useStore } from './store';
@@ -74,12 +73,20 @@ function App() {
   const mode = useStore((state) => state.mode);
   const modeConfigs = useStore((state) => state.modeConfigs);
   const exercisesByMode = useStore((state) => state.exercisesByMode);
-  const exercises = mode === 'INTERVAL' ? DEFAULT_CUES : exercisesByMode[mode];
+  const exercises = exercisesByMode[mode];
+
   const history = useStore((state) => state.history);
   const tutorialSeen = useStore((state) => state.tutorialSeen);
   const setMode = useStore((state) => state.setMode);
   const setModeConfigs = useStore((state) => state.setModeConfigs);
-  const setExercises = useStore((state) => state.setExercises);
+  const setExercisesStore = useStore((state) => state.setExercises);
+
+  const setExercises = useCallback(
+    (updater: React.SetStateAction<string[]>) => {
+      setExercisesStore(mode, updater);
+    },
+    [mode, setExercisesStore]
+  );
   const addHistoryItem = useStore((state) => state.addHistoryItem);
   const setTutorialSeen = useStore((state) => state.setTutorialSeen);
 
