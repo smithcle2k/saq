@@ -8,6 +8,8 @@ export interface IntervalCue {
   afterPreviousEndMs?: number;
   announcement?: string;
   speak?: boolean;
+  /** TTS speech rate for this cue (default 1.0) */
+  rate?: number;
 }
 
 export interface IntervalCuePlan {

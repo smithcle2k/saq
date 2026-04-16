@@ -73,6 +73,7 @@ export const useActiveTimerEngine = ({
               onAnnounce(cue.announcement ?? cue.label, {
                 interrupt: cue.interrupt ?? true,
                 afterPreviousEndMs: cue.afterPreviousEndMs,
+                rate: cue.rate,
               });
             }
           }, cue.offsetMs - elapsedMs)
@@ -118,7 +119,7 @@ export const useActiveTimerEngine = ({
     });
 
     if (next.announcement) {
-      onAnnounce(next.announcement);
+      onAnnounce(next.announcement, next.announcementOptions);
     }
 
     if (next.phase === TimerPhase.WORK && next.cuePlan.length > 0) {

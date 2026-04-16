@@ -100,6 +100,7 @@ export const ActiveTimer: React.FC<ActiveTimerProps> = ({
       speak(message, {
         interrupt: options?.interrupt ?? true,
         afterPreviousEndMs: options?.afterPreviousEndMs ?? 0,
+        rate: options?.rate,
       }),
   });
 

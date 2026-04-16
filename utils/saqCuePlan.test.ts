@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { buildSaqCuePlan } from './saqCuePlan';
+import { buildSaqCuePlan, SAQ_CUE_RATE } from './saqCuePlan';
 
 describe('buildSaqCuePlan', () => {
   beforeEach(() => {
@@ -21,6 +21,7 @@ describe('buildSaqCuePlan', () => {
     expect(cuePlan[1].label).not.toBe(cuePlan[2].label);
     expect(cuePlan[2].label).not.toBe(cuePlan[3].label);
     expect(cuePlan[3].label).not.toBe(cuePlan[4].label);
+    expect(cuePlan.every((cue) => cue.rate === SAQ_CUE_RATE)).toBe(true);
   });
 
   it('falls back to SAQ default cues when no custom exercise list exists', () => {
@@ -30,6 +31,7 @@ describe('buildSaqCuePlan', () => {
 
     expect(cuePlan).toHaveLength(5);
     expect(cuePlan[0].label).toBe('Forward');
+    expect(cuePlan[0].rate).toBe(SAQ_CUE_RATE);
   });
 
   it('uses custom cues as-is when a non-empty list is provided', () => {

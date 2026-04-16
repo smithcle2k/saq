@@ -6,7 +6,7 @@ let preferredVoice: string | undefined;
 let hasPrimedSpeech = false;
 let activeSpeechToken = 0;
 let isSpeechActive = false;
-let queuedSpeech: Array<{ text: string; afterPreviousEndMs: number }> = [];
+let queuedSpeech: Array<{ text: string; afterPreviousEndMs: number; rate: number }> = [];
 let delayedSpeechStartTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
 export const isAndroidChromeWeb = () => {
@@ -21,6 +21,8 @@ export const isAndroidChromeWeb = () => {
 export interface SpeakOptions {
   interrupt?: boolean;
   afterPreviousEndMs?: number;
+  /** Speech rate; expo-speech default is 1.0 */
+  rate?: number;
 }
 
 interface InitializeSpeechOptions {
@@ -62,8 +64,8 @@ const clearDelayedSpeechStart = () => {
   }
 };
 
-const createSpeechOptions = (handleDone?: () => void) => ({
-  rate: 1,
+const createSpeechOptions = (handleDone?: () => void, rate = 1) => ({
+  rate,
   pitch: 1,
   volume: 1,
   language: 'en-US',
@@ -89,7 +91,7 @@ const processSpeechQueue = (afterPreviousUtteranceEnded = false) => {
       processSpeechQueue(true);
     };
 
-    Speech.speak(nextSpeech.text, createSpeechOptions(handleDone));
+    Speech.speak(nextSpeech.text, createSpeechOptions(handleDone, nextSpeech.rate));
   };
 
   if (afterPreviousUtteranceEnded && nextSpeech.afterPreviousEndMs > 0) {
@@ -100,7 +102,12 @@ const processSpeechQueue = (afterPreviousUtteranceEnded = false) => {
   speakQueuedUtterance();
 };
 
-const speakNow = async (text: string, interrupt: boolean, afterPreviousEndMs: number) => {
+const speakNow = async (
+  text: string,
+  interrupt: boolean,
+  afterPreviousEndMs: number,
+  rate: number
+) => {
   if (interrupt) {
     const hasQueuedSpeech = queuedSpeech.length > 0 || delayedSpeechStartTimeoutId !== null;
     const hasActiveSpeech = isSpeechActive;
@@ -118,11 +125,11 @@ const speakNow = async (text: string, interrupt: boolean, afterPreviousEndMs: nu
   // Android Chrome already queues browser speech internally; waiting for
   // expo-speech's completion callback there adds an extra pause between cues.
   if (isAndroidChromeWeb()) {
-    Speech.speak(text, createSpeechOptions());
+    Speech.speak(text, createSpeechOptions(undefined, rate));
     return;
   }
 
-  queuedSpeech.push({ text, afterPreviousEndMs });
+  queuedSpeech.push({ text, afterPreviousEndMs, rate });
   processSpeechQueue();
 };
 
@@ -147,9 +154,10 @@ export const speak = (text: string, options: SpeakOptions = {}) => {
   const message = text.trim();
   const interrupt = options.interrupt ?? true;
   const afterPreviousEndMs = options.afterPreviousEndMs ?? 0;
+  const rate = options.rate ?? 1;
 
   void loadVoices();
-  void speakNow(message, interrupt, afterPreviousEndMs);
+  void speakNow(message, interrupt, afterPreviousEndMs, rate);
 };
 
 export const stopSpeech = () => {

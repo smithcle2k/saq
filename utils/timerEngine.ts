@@ -1,5 +1,6 @@
 import { IntervalCue, IntervalCuePlan } from './intervalCuePlan';
 import { buildSaqCuePlan } from './saqCuePlan';
+import type { SpeakOptions } from './tts';
 import { TimerConfig, TimerPhase } from '../types';
 
 export interface TimerSnapshot {
@@ -13,6 +14,7 @@ export interface TimerSnapshot {
 export interface TransitionResult extends TimerSnapshot {
   announcement: string;
   shouldFinish: boolean;
+  announcementOptions?: SpeakOptions;
 }
 
 export const createInitialSnapshot = (config: TimerConfig): TimerSnapshot => ({
@@ -43,6 +45,7 @@ export const getNextSnapshot = (
         cuePlan: remainingCues,
         announcement: firstLabel,
         shouldFinish: false,
+        announcementOptions: firstCue?.rate !== undefined ? { rate: firstCue.rate } : undefined,
       };
     }
 
@@ -85,6 +88,7 @@ export const getNextSnapshot = (
           cuePlan: remainingCues,
           announcement: firstLabel,
           shouldFinish: false,
+          announcementOptions: firstCue?.rate !== undefined ? { rate: firstCue.rate } : undefined,
         };
       }
 
