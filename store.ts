@@ -13,6 +13,9 @@ interface PersistedAppState {
   exercisesByMode?: Partial<Record<TimerMode, string[]>>;
   history?: WorkoutHistoryItem[];
   tutorialSeen?: boolean;
+  soundEffectsEnabled?: boolean;
+  voiceEnabled?: boolean;
+  hapticsEnabled?: boolean;
 }
 
 interface AppState {
@@ -21,8 +24,14 @@ interface AppState {
   exercisesByMode: Record<TimerMode, string[]>;
   history: WorkoutHistoryItem[];
   tutorialSeen: boolean;
+  soundEffectsEnabled: boolean;
+  voiceEnabled: boolean;
+  hapticsEnabled: boolean;
 
   setMode: (mode: TimerMode) => void;
+  setSoundEffectsEnabled: (enabled: boolean) => void;
+  setVoiceEnabled: (enabled: boolean) => void;
+  setHapticsEnabled: (enabled: boolean) => void;
   setModeConfigs: (updater: ModeConfigMap | ((prev: ModeConfigMap) => ModeConfigMap)) => void;
   setConfigForMode: (mode: TimerMode, config: Omit<TimerConfig, 'mode'>) => void;
   setExercises: (mode: TimerMode, exercises: string[] | ((prev: string[]) => string[])) => void;
@@ -90,8 +99,14 @@ export const useStore = create<AppState>()(
       exercisesByMode: { INTERVAL: DEFAULT_CUES, SAQ: SAQ_DEFAULT_CUES },
       history: [],
       tutorialSeen: false,
+      soundEffectsEnabled: true,
+      voiceEnabled: true,
+      hapticsEnabled: true,
 
       setMode: (mode) => set({ mode }),
+      setSoundEffectsEnabled: (enabled) => set({ soundEffectsEnabled: enabled }),
+      setVoiceEnabled: (enabled) => set({ voiceEnabled: enabled }),
+      setHapticsEnabled: (enabled) => set({ hapticsEnabled: enabled }),
       setModeConfigs: (updater) =>
         set((state) => ({
           modeConfigs: typeof updater === 'function' ? updater(state.modeConfigs) : updater,

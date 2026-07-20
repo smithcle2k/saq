@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 import * as Speech from 'expo-speech';
+import { useStore } from '../store';
 
 let voicesReadyPromise: Promise<void> | null = null;
 let preferredVoice: string | undefined;
@@ -31,16 +32,27 @@ interface InitializeSpeechOptions {
 
 const selectPreferredVoice = async () => {
   const voices = await Speech.getAvailableVoicesAsync();
-  const prioritized = voices.find(
-    (voice) =>
-      voice.language.toLowerCase().startsWith('en') &&
-      (voice.name.includes('Google') ||
-        voice.name.includes('Daniel') ||
-        voice.name.includes('Samantha'))
-  );
+  const englishVoices = voices.filter((voice) => voice.language.toLowerCase().startsWith('en'));
+  if (englishVoices.length === 0) return undefined;
 
-  if (prioritized) return prioritized.identifier;
-  return voices.find((voice) => voice.language.toLowerCase().startsWith('en'))?.identifier;
+  // Enhanced maps to on-device voices on web, which start speaking with far
+  // less latency than network voices — critical for 1-second cue cadence.
+  const scoreVoice = (voice: (typeof voices)[number]) => {
+    let score = 0;
+    if (voice.quality === Speech.VoiceQuality.Enhanced) score += 2;
+    if (
+      voice.name.includes('Google') ||
+      voice.name.includes('Daniel') ||
+      voice.name.includes('Samantha')
+    ) {
+      score += 1;
+    }
+    return score;
+  };
+
+  return englishVoices.reduce((best, voice) =>
+    scoreVoice(voice) > scoreVoice(best) ? voice : best
+  ).identifier;
 };
 
 const loadVoices = () => {
@@ -150,6 +162,7 @@ export const initializeSpeech = (options: InitializeSpeechOptions = {}) => {
 
 export const speak = (text: string, options: SpeakOptions = {}) => {
   if (!text?.trim()) return;
+  if (!useStore.getState().voiceEnabled) return;
 
   const message = text.trim();
   const interrupt = options.interrupt ?? true;

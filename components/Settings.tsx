@@ -6,6 +6,47 @@ import { colors, fonts } from '../theme';
 import { DEFAULT_CUES, INTERVAL_SINGLE_CUES, SAQ_DEFAULT_CUES } from '../utils/defaultCues';
 import { validateCueLabel } from '../utils/cueModeration';
 import { TimerMode } from '../types';
+import { useStore } from '../store';
+
+const AudioSettingRow: React.FC<{
+  label: string;
+  value: boolean;
+  onChange: (value: boolean) => void;
+}> = ({ label, value, onChange }) => (
+  <View style={styles.audioRow}>
+    <Text style={styles.itemLabel}>{label}</Text>
+    <Switch
+      value={value}
+      onValueChange={onChange}
+      trackColor={{ false: 'rgba(148,163,184,0.35)', true: 'rgba(0,240,255,0.45)' }}
+      thumbColor={value ? colors.primary : '#f1f5f9'}
+      ios_backgroundColor="rgba(148,163,184,0.35)"
+      accessibilityLabel={`${value ? 'Disable' : 'Enable'} ${label.toLowerCase()}`}
+    />
+  </View>
+);
+
+const AudioSettings: React.FC = () => {
+  const soundEffectsEnabled = useStore((state) => state.soundEffectsEnabled);
+  const voiceEnabled = useStore((state) => state.voiceEnabled);
+  const hapticsEnabled = useStore((state) => state.hapticsEnabled);
+  const setSoundEffectsEnabled = useStore((state) => state.setSoundEffectsEnabled);
+  const setVoiceEnabled = useStore((state) => state.setVoiceEnabled);
+  const setHapticsEnabled = useStore((state) => state.setHapticsEnabled);
+
+  return (
+    <View style={styles.audioCard}>
+      <Text style={styles.audioHeading}>Audio & Feedback</Text>
+      <AudioSettingRow label="Voice cues" value={voiceEnabled} onChange={setVoiceEnabled} />
+      <AudioSettingRow
+        label="Sound effects"
+        value={soundEffectsEnabled}
+        onChange={setSoundEffectsEnabled}
+      />
+      <AudioSettingRow label="Vibration" value={hapticsEnabled} onChange={setHapticsEnabled} />
+    </View>
+  );
+};
 
 interface SettingsProps {
   exercises: string[];
@@ -41,6 +82,8 @@ const IntervalCueSettings: React.FC<{
         <Text style={styles.headerTitle}>CUES</Text>
         <View style={styles.headerSpacer} />
       </View>
+
+      <AudioSettings />
 
       <Text style={styles.intervalExplainer}>
         Turn cues on or off. Each work round picks one cue at random from those that are enabled. At
@@ -154,6 +197,8 @@ export const Settings: React.FC<SettingsProps> = ({ exercises, setExercises, mod
         <View style={styles.headerSpacer} />
       </View>
 
+      <AudioSettings />
+
       <View style={styles.addCard}>
         <Text style={styles.addLabel}>Add new cue</Text>
         <View style={styles.addRow}>
@@ -247,6 +292,28 @@ const styles = StyleSheet.create({
   },
   headerSpacer: {
     width: 48,
+  },
+  audioCard: {
+    marginBottom: 16,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: colors.outline,
+    backgroundColor: colors.surfaceCard,
+    padding: 18,
+    gap: 14,
+  },
+  audioHeading: {
+    color: colors.primary,
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 12,
+    letterSpacing: 1.6,
+    textTransform: 'uppercase',
+  },
+  audioRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 16,
   },
   intervalExplainer: {
     color: colors.onSurfaceVariant,

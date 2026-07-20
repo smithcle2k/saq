@@ -72,6 +72,14 @@ export const Statistics: React.FC<StatisticsProps> = ({ history, onClose }) => {
                       <Text style={styles.historyTime}>
                         {format(new Date(item.date), 'h:mm a')}
                       </Text>
+                      {item.mode ? (
+                        <View style={styles.modeChip}>
+                          <Text style={styles.modeChipText}>
+                            {item.mode}
+                            {item.rounds ? ` • ${item.rounds}` : ''}
+                          </Text>
+                        </View>
+                      ) : null}
                       <Text style={styles.historyDuration}>
                         {formatAccumulatedDuration(item.duration)}
                       </Text>
@@ -223,6 +231,20 @@ const styles = StyleSheet.create({
     color: colors.onSurfaceVariant,
     fontFamily: fonts.sansMedium,
     fontSize: 14,
+  },
+  modeChip: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(0,240,255,0.3)',
+    backgroundColor: 'rgba(0,240,255,0.1)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  modeChipText: {
+    color: colors.primary,
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 11,
+    letterSpacing: 0.8,
   },
   historyDuration: {
     color: colors.onSurface,
