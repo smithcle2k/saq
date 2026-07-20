@@ -1,16 +1,19 @@
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import * as Haptics from 'expo-haptics';
+import { Animated, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Svg, { Circle } from 'react-native-svg';
 import { TimerConfig, TimerPhase } from '../types';
 import { colors, fonts, gradients } from '../theme';
-import { formatTime } from '../utils/timeUtils';
+import { calculateTotalTime, formatTime } from '../utils/timeUtils';
 import { shouldAnnounceRestFiveSeconds, shouldPlayCountdownBeep } from '../utils/timerAlerts';
 import { speak, stopSpeech } from '../utils/tts';
 import { AudioCueName } from '../utils/audioCues';
 import { useActiveTimerEngine } from '../hooks/useActiveTimerEngine';
 import { useWakeLock } from '../hooks/useWakeLock';
+import { useStore } from '../store';
 
 interface ActiveTimerProps {
   config: TimerConfig;
@@ -50,6 +53,73 @@ const phaseConfig = {
   },
 };
 
+const RING_SIZE = 280;
+const RING_STROKE = 10;
+const RING_RADIUS = (RING_SIZE - RING_STROKE) / 2;
+const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
+
+interface ProgressRingProps {
+  progress: number;
+}
+
+const ProgressRing: React.FC<ProgressRingProps> = ({ progress }) => (
+  <Svg
+    width={RING_SIZE}
+    height={RING_SIZE}
+    style={styles.ringSvg}
+    viewBox={`0 0 ${RING_SIZE} ${RING_SIZE}`}
+  >
+    <Circle
+      cx={RING_SIZE / 2}
+      cy={RING_SIZE / 2}
+      r={RING_RADIUS}
+      stroke="rgba(255,255,255,0.18)"
+      strokeWidth={RING_STROKE}
+      fill="none"
+    />
+    <Circle
+      cx={RING_SIZE / 2}
+      cy={RING_SIZE / 2}
+      r={RING_RADIUS}
+      stroke={colors.onSurface}
+      strokeWidth={RING_STROKE}
+      strokeLinecap="round"
+      fill="none"
+      strokeDasharray={RING_CIRCUMFERENCE}
+      strokeDashoffset={RING_CIRCUMFERENCE * (1 - Math.min(1, Math.max(0, progress)))}
+      transform={`rotate(-90 ${RING_SIZE / 2} ${RING_SIZE / 2})`}
+    />
+  </Svg>
+);
+
+/** Spoken cue rendered large with a pop-in each time it changes. */
+const CueFlash: React.FC<{ cue: string }> = ({ cue }) => {
+  const [scale] = useState(() => new Animated.Value(1));
+
+  useEffect(() => {
+    if (!cue) return;
+    scale.setValue(0.5);
+    Animated.spring(scale, {
+      toValue: 1,
+      friction: 5,
+      tension: 120,
+      useNativeDriver: true,
+    }).start();
+  }, [cue, scale]);
+
+  if (!cue) return null;
+
+  return (
+    <Animated.Text
+      style={[styles.exerciseText, { transform: [{ scale }] }]}
+      numberOfLines={2}
+      adjustsFontSizeToFit
+    >
+      {cue}
+    </Animated.Text>
+  );
+};
+
 // Round Progress Dots Component
 interface RoundDotsProps {
   currentRound: number;
@@ -78,6 +148,20 @@ const RoundDots: React.FC<RoundDotsProps> = ({ currentRound, totalRounds }) => {
   );
 };
 
+const triggerPhaseHaptic = (phase: TimerPhase) => {
+  try {
+    if (phase === TimerPhase.WORK) {
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } else if (phase === TimerPhase.FINISHED) {
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } else {
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    }
+  } catch {
+    // Haptics unavailable (e.g. desktop web) — ignore.
+  }
+};
+
 export const ActiveTimer: React.FC<ActiveTimerProps> = ({
   config,
   exercises,
@@ -89,20 +173,22 @@ export const ActiveTimer: React.FC<ActiveTimerProps> = ({
   const isSaqMode = config.mode === 'SAQ';
   useWakeLock();
 
+  const hapticsEnabled = useStore((state) => state.hapticsEnabled);
   const hasAnnouncedPrepRef = useRef(false);
   const hasAnnouncedRestFiveSecondsRef = useRef(false);
   const prevPhaseRef = useRef<TimerPhase | null>(null);
-  const { phase, timeRemaining, currentRound, isPaused, togglePause } = useActiveTimerEngine({
-    config,
-    exercises,
-    onFinish,
-    onAnnounce: (message, options) =>
-      speak(message, {
-        interrupt: options?.interrupt ?? true,
-        afterPreviousEndMs: options?.afterPreviousEndMs ?? 0,
-        rate: options?.rate,
-      }),
-  });
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const { phase, timeRemaining, currentRound, currentCue, isPaused, togglePause } =
+    useActiveTimerEngine({
+      config,
+      exercises,
+      onAnnounce: (message, options) =>
+        speak(message, {
+          interrupt: options?.interrupt ?? true,
+          afterPreviousEndMs: options?.afterPreviousEndMs ?? 0,
+          rate: options?.rate,
+        }),
+    });
 
   useEffect(() => {
     if (hasAnnouncedPrepRef.current) return;
@@ -112,10 +198,10 @@ export const ActiveTimer: React.FC<ActiveTimerProps> = ({
 
   // Synchronized countdown beeps
   useEffect(() => {
-    if (shouldPlayCountdownBeep(phase, timeRemaining, isPaused)) {
+    if (shouldPlayCountdownBeep(phase, timeRemaining, isPaused, config.workTime)) {
       playAudioCue('beep');
     }
-  }, [timeRemaining, phase, isPaused, playAudioCue]);
+  }, [timeRemaining, phase, isPaused, playAudioCue, config.workTime]);
 
   useEffect(() => {
     if (phase !== TimerPhase.REST) {
@@ -136,7 +222,7 @@ export const ActiveTimer: React.FC<ActiveTimerProps> = ({
     }
   }, [timeRemaining, phase, isPaused]);
 
-  // Phase entrance sounds
+  // Phase entrance sounds + haptics
   useEffect(() => {
     if (isPaused) return;
 
@@ -146,12 +232,25 @@ export const ActiveTimer: React.FC<ActiveTimerProps> = ({
       } else if (phase === TimerPhase.REST || phase === TimerPhase.COOL_DOWN) {
         playAudioCue('buzzer');
       }
+
+      if (hapticsEnabled) {
+        triggerPhaseHaptic(phase);
+      }
     }
     prevPhaseRef.current = phase;
-  }, [phase, isPaused, playAudioCue]);
+  }, [phase, isPaused, playAudioCue, hapticsEnabled]);
 
   const currentPhaseConfig = phaseConfig[phase];
   const isCountdown = timeRemaining <= 3 && timeRemaining > 0;
+
+  const phaseDuration = useMemo(() => {
+    if (phase === TimerPhase.PREP) return config.prepTime;
+    if (phase === TimerPhase.WORK) return config.workTime;
+    if (phase === TimerPhase.REST) return config.restTime;
+    if (phase === TimerPhase.COOL_DOWN) return config.coolDownTime;
+    return 0;
+  }, [phase, config]);
+
   const helperText = useMemo(() => {
     if (phase === TimerPhase.PREP) return 'Get ready';
     if (phase === TimerPhase.REST) return isSaqMode ? 'Reset and reload' : 'Breathe';
@@ -172,12 +271,31 @@ export const ActiveTimer: React.FC<ActiveTimerProps> = ({
     onExit();
   };
 
+  const handleExitPress = () => {
+    if (phase === TimerPhase.FINISHED) {
+      handleExit();
+      return;
+    }
+
+    if (!isPaused) togglePause();
+    setShowExitConfirm(true);
+  };
+
+  const handleResumeFromExitConfirm = () => {
+    setShowExitConfirm(false);
+    if (isPaused) togglePause();
+  };
+
   return (
     <LinearGradient colors={currentPhaseConfig.colors} style={styles.gradient}>
       <SafeAreaView style={styles.safeArea}>
         <View style={[styles.glow, { backgroundColor: `${currentPhaseConfig.ringColor}55` }]} />
 
-        <Modal transparent visible={isPaused && phase !== TimerPhase.FINISHED} animationType="fade">
+        <Modal
+          transparent
+          visible={isPaused && !showExitConfirm && phase !== TimerPhase.FINISHED}
+          animationType="fade"
+        >
           <View style={styles.pauseOverlay}>
             <View style={styles.pauseCard}>
               <Text style={styles.pauseLabel}>Paused</Text>
@@ -189,8 +307,28 @@ export const ActiveTimer: React.FC<ActiveTimerProps> = ({
           </View>
         </Modal>
 
+        <Modal transparent visible={showExitConfirm} animationType="fade">
+          <View style={styles.pauseOverlay}>
+            <View style={styles.pauseCard}>
+              <Text style={styles.pauseLabel}>End workout?</Text>
+              <Text style={styles.exitConfirmHint}>Your progress won't be saved</Text>
+              <Pressable onPress={handleResumeFromExitConfirm} style={styles.resumeButton}>
+                <Ionicons name="play" size={28} color={colors.surface} />
+                <Text style={styles.resumeText}>KEEP GOING</Text>
+              </Pressable>
+              <Pressable onPress={handleExit} style={styles.endButton}>
+                <Text style={styles.endButtonText}>END WORKOUT</Text>
+              </Pressable>
+            </View>
+          </View>
+        </Modal>
+
         <View style={styles.topBar}>
-          <Pressable onPress={handleExit} style={styles.topButton}>
+          <Pressable
+            onPress={handleExitPress}
+            style={styles.topButton}
+            accessibilityLabel="Exit workout"
+          >
             <Ionicons name="close" size={24} color={colors.onSurface} />
           </Pressable>
           <Text style={styles.phaseLabel}>
@@ -209,16 +347,38 @@ export const ActiveTimer: React.FC<ActiveTimerProps> = ({
             <View style={styles.finishWrap}>
               <Text style={styles.finishTitle}>GREAT JOB!</Text>
               <Text style={styles.finishSubtitle}>Workout Complete</Text>
+              <View style={styles.finishStats}>
+                <View style={styles.finishStat}>
+                  <Text style={styles.finishStatValue}>{config.rounds}</Text>
+                  <Text style={styles.finishStatLabel}>Rounds</Text>
+                </View>
+                <View style={styles.finishStatDivider} />
+                <View style={styles.finishStat}>
+                  <Text style={styles.finishStatValue}>
+                    {formatTime(calculateTotalTime(config))}
+                  </Text>
+                  <Text style={styles.finishStatLabel}>Time</Text>
+                </View>
+              </View>
+              <Pressable onPress={onFinish} style={styles.doneButton} accessibilityLabel="Done">
+                <Ionicons name="checkmark" size={24} color={colors.surface} />
+                <Text style={styles.doneButtonText}>DONE</Text>
+              </Pressable>
             </View>
           ) : (
             <>
-              <Text style={[styles.timerText, isCountdown && styles.timerCountdown]}>
-                {formatTime(timeRemaining)}
-              </Text>
+              <View style={styles.ringWrap}>
+                <ProgressRing progress={phaseDuration > 0 ? timeRemaining / phaseDuration : 0} />
+                <Text style={[styles.timerText, isCountdown && styles.timerCountdown]}>
+                  {formatTime(timeRemaining)}
+                </Text>
+              </View>
 
-              {phase !== TimerPhase.WORK ? (
+              {phase === TimerPhase.WORK ? (
+                <CueFlash cue={currentCue} />
+              ) : (
                 <Text style={styles.helperText}>{helperText}</Text>
-              ) : null}
+              )}
 
               <RoundDots currentRound={currentRound} totalRounds={config.rounds} />
             </>
@@ -276,6 +436,12 @@ const styles = StyleSheet.create({
     letterSpacing: 3,
     textTransform: 'uppercase',
   },
+  exitConfirmHint: {
+    marginTop: -12,
+    color: 'rgba(255,255,255,0.55)',
+    fontFamily: fonts.sansMedium,
+    fontSize: 15,
+  },
   resumeButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -289,6 +455,19 @@ const styles = StyleSheet.create({
     color: colors.surface,
     fontFamily: fonts.sansBold,
     fontSize: 18,
+  },
+  endButton: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.35)',
+    paddingHorizontal: 32,
+    paddingVertical: 14,
+  },
+  endButtonText: {
+    color: 'rgba(255,255,255,0.85)',
+    fontFamily: fonts.sansBold,
+    fontSize: 15,
+    letterSpacing: 0.8,
   },
   topBar: {
     flexDirection: 'row',
@@ -347,10 +526,68 @@ const styles = StyleSheet.create({
     fontFamily: fonts.sansSemiBold,
     fontSize: 24,
   },
+  finishStats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 24,
+    marginTop: 12,
+    borderRadius: 24,
+    backgroundColor: 'rgba(0,0,0,0.22)',
+    paddingHorizontal: 32,
+    paddingVertical: 20,
+  },
+  finishStat: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  finishStatValue: {
+    color: colors.onSurface,
+    fontFamily: fonts.monoBold,
+    fontSize: 28,
+  },
+  finishStatLabel: {
+    color: 'rgba(255,255,255,0.6)',
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 12,
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
+  },
+  finishStatDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  doneButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 20,
+    borderRadius: 999,
+    backgroundColor: colors.onSurface,
+    paddingHorizontal: 40,
+    paddingVertical: 18,
+  },
+  doneButtonText: {
+    color: colors.surface,
+    fontFamily: fonts.sansBold,
+    fontSize: 18,
+    letterSpacing: 0.8,
+  },
+  ringWrap: {
+    height: RING_SIZE,
+    width: RING_SIZE,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ringSvg: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+  },
   timerText: {
     color: colors.onSurface,
     fontFamily: fonts.monoBold,
-    fontSize: 72,
+    fontSize: 64,
     letterSpacing: -3,
   },
   timerCountdown: {
@@ -358,13 +595,15 @@ const styles = StyleSheet.create({
   },
   exerciseText: {
     marginTop: 24,
+    minHeight: 44,
     color: colors.onSurface,
     fontFamily: fonts.sansBold,
-    fontSize: 34,
+    fontSize: 36,
     textAlign: 'center',
   },
   helperText: {
     marginTop: 24,
+    minHeight: 44,
     color: 'rgba(255,255,255,0.72)',
     fontFamily: fonts.sansMedium,
     fontSize: 20,

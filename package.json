@@ -20,6 +20,7 @@
     "expo": "^55.0.8",
     "expo-audio": "~55.0.9",
     "expo-font": "~55.0.4",
+    "expo-haptics": "~55.0.16",
     "expo-keep-awake": "~55.0.4",
     "expo-linear-gradient": "~55.0.9",
     "expo-speech": "~55.0.9",

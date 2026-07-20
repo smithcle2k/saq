@@ -147,9 +147,9 @@ export const getNextSnapshot = (
   };
 };
 
-export const decrementSnapshot = (snapshot: TimerSnapshot): TimerSnapshot => ({
+export const decrementSnapshot = (snapshot: TimerSnapshot, seconds = 1): TimerSnapshot => ({
   ...snapshot,
-  timeRemaining: snapshot.timeRemaining > 0 ? snapshot.timeRemaining - 1 : 0,
+  timeRemaining: Math.max(0, snapshot.timeRemaining - seconds),
 });
 
 export const buildSaqPlanFromExercises = (exercises: string[]) =>

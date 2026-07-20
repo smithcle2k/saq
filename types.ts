@@ -20,6 +20,9 @@ export enum TimerPhase {
 export interface WorkoutHistoryItem {
   date: string;
   duration: number;
+  /** Absent on records saved before mode/rounds tracking was added. */
+  mode?: TimerMode;
+  rounds?: number;
 }
 
 export type View = 'SETUP' | 'TIMER' | 'SETTINGS' | 'STATS';

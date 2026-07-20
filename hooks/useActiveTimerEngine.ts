@@ -13,22 +13,28 @@ import { buildIntervalCuePlan, IntervalCue } from '../utils/intervalCuePlan';
 interface UseActiveTimerEngineParams {
   config: TimerConfig;
   exercises: string[];
-  onFinish: () => void;
   onAnnounce: (message: string, options?: SpeakOptions) => void;
 }
+
+/**
+ * Ticks 4x per second and derives elapsed whole seconds from wall-clock time,
+ * so the countdown stays accurate even when the browser throttles timers in a
+ * backgrounded tab and catches up as soon as the tab wakes.
+ */
+const TICK_INTERVAL_MS = 250;
 
 export const useActiveTimerEngine = ({
   config,
   exercises,
-  onFinish,
   onAnnounce,
 }: UseActiveTimerEngineParams) => {
   const [timerSnapshot, setTimerSnapshot] = useState<TimerSnapshot>(() =>
     createInitialSnapshot(config)
   );
   const [isPaused, setIsPaused] = useState(false);
+  const [currentCue, setCurrentCue] = useState('');
   const timerSnapshotRef = useRef(timerSnapshot);
-  const finishTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastTickTimeRef = useRef(0);
   const cueTimeoutsRef = useRef<Array<ReturnType<typeof setTimeout>>>([]);
   const cueScheduleStartedAtRef = useRef<number | null>(null);
   const elapsedCueScheduleMsRef = useRef(0);
@@ -69,6 +75,7 @@ export const useActiveTimerEngine = ({
               return;
             }
 
+            setCurrentCue(cue.label);
             if (cue.speak ?? true) {
               onAnnounce(cue.announcement ?? cue.label, {
                 interrupt: cue.interrupt ?? true,
@@ -91,13 +98,6 @@ export const useActiveTimerEngine = ({
     [scheduleCuePlan]
   );
 
-  const scheduleFinish = useCallback(() => {
-    if (finishTimeoutRef.current) {
-      clearTimeout(finishTimeoutRef.current);
-    }
-    finishTimeoutRef.current = setTimeout(onFinish, 3000);
-  }, [onFinish]);
-
   const triggerPhaseTransition = useCallback(() => {
     if (timerSnapshot.phase === TimerPhase.WORK) {
       resetCueSchedule();
@@ -117,6 +117,7 @@ export const useActiveTimerEngine = ({
       currentExercise: next.currentExercise,
       cuePlan: next.cuePlan,
     });
+    setCurrentCue(next.phase === TimerPhase.WORK ? next.currentExercise : '');
 
     if (next.announcement) {
       onAnnounce(next.announcement, next.announcementOptions);
@@ -125,16 +126,11 @@ export const useActiveTimerEngine = ({
     if (next.phase === TimerPhase.WORK && next.cuePlan.length > 0) {
       startCuePlan(next.cuePlan);
     }
-
-    if (next.shouldFinish) {
-      scheduleFinish();
-    }
   }, [
     timerSnapshot,
     config,
     getRandomExercise,
     onAnnounce,
-    scheduleFinish,
     resetCueSchedule,
     startCuePlan,
     exercises,
@@ -142,12 +138,26 @@ export const useActiveTimerEngine = ({
   ]);
 
   const tick = useCallback(() => {
-    if (isPaused) return;
-    setTimerSnapshot((prev) => decrementSnapshot(prev));
+    const now = Date.now();
+    if (lastTickTimeRef.current === 0) {
+      lastTickTimeRef.current = now;
+    }
+
+    if (isPaused) {
+      lastTickTimeRef.current = now;
+      return;
+    }
+
+    const elapsedMs = now - lastTickTimeRef.current;
+    if (elapsedMs < 1000) return;
+
+    const elapsedSeconds = Math.floor(elapsedMs / 1000);
+    lastTickTimeRef.current += elapsedSeconds * 1000;
+    setTimerSnapshot((prev) => decrementSnapshot(prev, elapsedSeconds));
   }, [isPaused]);
 
   useEffect(() => {
-    const timerId = setInterval(tick, 1000);
+    const timerId = setInterval(tick, TICK_INTERVAL_MS);
     return () => clearInterval(timerId);
   }, [tick]);
 
@@ -163,15 +173,16 @@ export const useActiveTimerEngine = ({
   useEffect(() => {
     return () => {
       resetCueSchedule();
-      if (finishTimeoutRef.current) {
-        clearTimeout(finishTimeoutRef.current);
-      }
     };
   }, [resetCueSchedule]);
 
   const togglePause = useCallback(() => {
     setIsPaused((prev) => {
       const nextPaused = !prev;
+
+      if (!nextPaused) {
+        lastTickTimeRef.current = Date.now();
+      }
 
       if (phase === TimerPhase.WORK && timerSnapshot.cuePlan.length > 0) {
         if (nextPaused) {
@@ -194,6 +205,7 @@ export const useActiveTimerEngine = ({
     phase,
     timeRemaining,
     currentRound,
+    currentCue,
     cuePlan: timerSnapshot.cuePlan,
     isPaused,
     togglePause,

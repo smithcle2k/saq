@@ -3,6 +3,7 @@ import { setAudioModeAsync, useAudioPlayer } from 'expo-audio';
 import beepWav from '../assets/audio/beep.wav';
 import whistleWav from '../assets/audio/whistle.wav';
 import buzzerWav from '../assets/audio/buzzer.wav';
+import { useStore } from '../store';
 
 export type AudioCueName = 'beep' | 'whistle' | 'buzzer';
 
@@ -29,6 +30,8 @@ export const useAudioCues = () => {
 
   const playAudioCue = useCallback(
     (name: AudioCueName) => {
+      if (!useStore.getState().soundEffectsEnabled) return;
+
       const player =
         name === 'beep' ? beepPlayer : name === 'whistle' ? whistlePlayer : buzzerPlayer;
 

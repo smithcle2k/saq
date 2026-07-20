@@ -173,6 +173,8 @@ function App() {
     saveHistory({
       date: new Date().toISOString(),
       duration,
+      mode,
+      rounds: config.rounds,
     });
     setView('SETUP');
   };
