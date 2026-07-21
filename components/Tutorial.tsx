@@ -1,7 +1,7 @@
 import React from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { colors, fonts } from '../theme';
+import { colors, elevation, fonts } from '../theme';
 
 interface TutorialProps {
   onDismiss: () => void;
@@ -83,8 +83,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderRadius: 32,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-    backgroundColor: 'rgba(12,12,20,0.96)',
+    borderColor: colors.outline,
+    backgroundColor: colors.surfaceBright,
   },
   glow: {
     position: 'absolute',
@@ -93,7 +93,7 @@ const styles = StyleSheet.create({
     width: 220,
     height: 220,
     borderRadius: 999,
-    backgroundColor: 'rgba(0,240,255,0.08)',
+    backgroundColor: 'rgba(48,209,88,0.08)',
   },
   header: {
     flexDirection: 'row',
@@ -153,12 +153,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(0,240,255,0.4)',
-    backgroundColor: 'rgba(0,240,255,0.18)',
+    backgroundColor: colors.primary,
+    ...elevation.medium,
   },
   primaryButtonLabel: {
-    color: colors.primary,
+    color: colors.surface,
     fontFamily: fonts.sansBold,
     fontSize: 18,
     letterSpacing: 1,

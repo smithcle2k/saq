@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
   },
   valueGlow: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,240,255,0.04)',
+    backgroundColor: 'rgba(48,209,88,0.04)',
   },
   valueInner: {
     alignItems: 'center',

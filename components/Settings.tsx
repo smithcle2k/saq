@@ -18,7 +18,7 @@ const AudioSettingRow: React.FC<{
     <Switch
       value={value}
       onValueChange={onChange}
-      trackColor={{ false: 'rgba(148,163,184,0.35)', true: 'rgba(0,240,255,0.45)' }}
+      trackColor={{ false: 'rgba(148,163,184,0.35)', true: 'rgba(48,209,88,0.45)' }}
       thumbColor={value ? colors.primary : '#f1f5f9'}
       ios_backgroundColor="rgba(148,163,184,0.35)"
       accessibilityLabel={`${value ? 'Disable' : 'Enable'} ${label.toLowerCase()}`}
@@ -103,7 +103,7 @@ const IntervalCueSettings: React.FC<{
               <Switch
                 value={enabled}
                 onValueChange={(v) => toggleCue(cue, v)}
-                trackColor={{ false: 'rgba(148,163,184,0.35)', true: 'rgba(0,240,255,0.45)' }}
+                trackColor={{ false: 'rgba(148,163,184,0.35)', true: 'rgba(48,209,88,0.45)' }}
                 thumbColor={enabled ? colors.primary : '#f1f5f9'}
                 ios_backgroundColor="rgba(148,163,184,0.35)"
                 accessibilityLabel={`${enabled ? 'Disable' : 'Enable'} ${cue} cue`}
@@ -360,8 +360,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(0,240,255,0.4)',
-    backgroundColor: 'rgba(0,240,255,0.18)',
+    borderColor: 'rgba(48,209,88,0.4)',
+    backgroundColor: 'rgba(48,209,88,0.18)',
   },
   addButtonDisabled: {
     opacity: 0.3,
@@ -404,8 +404,8 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   itemCardActive: {
-    borderColor: 'rgba(0,240,255,0.35)',
-    backgroundColor: 'rgba(0,240,255,0.12)',
+    borderColor: 'rgba(48,209,88,0.35)',
+    backgroundColor: 'rgba(48,209,88,0.12)',
   },
   dragHandle: {
     paddingHorizontal: 4,
