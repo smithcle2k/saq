@@ -235,8 +235,8 @@ const styles = StyleSheet.create({
   modeChip: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: 'rgba(0,240,255,0.3)',
-    backgroundColor: 'rgba(0,240,255,0.1)',
+    borderColor: 'rgba(48,209,88,0.3)',
+    backgroundColor: 'rgba(48,209,88,0.1)',
     paddingHorizontal: 10,
     paddingVertical: 4,
   },

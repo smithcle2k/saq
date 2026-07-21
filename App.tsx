@@ -50,7 +50,7 @@ class ErrorBoundary extends React.Component<
             alignItems: 'center',
             justifyContent: 'center',
             padding: 20,
-            backgroundColor: '#030305',
+            backgroundColor: '#0A0A0A',
           }}
         >
           <Text

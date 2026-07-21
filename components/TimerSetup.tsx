@@ -2,7 +2,7 @@ import React from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { TimerConfig, TimerMode } from '../types';
-import { colors, fonts } from '../theme';
+import { colors, elevation, fonts } from '../theme';
 import { NumberInput } from './NumberInput';
 import { calculateTotalTime, formatTime } from '../utils/timeUtils';
 
@@ -154,7 +154,7 @@ export const TimerSetup: React.FC<TimerSetupProps> = ({
           onPress={onStart}
           style={({ pressed }) => [styles.startButton, pressed && styles.pressed]}
         >
-          <Ionicons name="play" size={20} color={colors.primary} />
+          <Ionicons name="play" size={20} color={colors.surface} />
           <Text style={styles.startButtonText}>START</Text>
         </Pressable>
       </View>
@@ -197,6 +197,7 @@ const styles = StyleSheet.create({
     borderColor: colors.outline,
     backgroundColor: colors.surfaceCard,
     padding: 8,
+    ...elevation.low,
   },
   modeButton: {
     flex: 1,
@@ -207,8 +208,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   modeButtonActive: {
-    borderColor: 'rgba(0,240,255,0.5)',
-    backgroundColor: 'rgba(0,240,255,0.2)',
+    borderColor: colors.primary,
+    backgroundColor: colors.primary,
   },
   modeButtonInactive: {
     borderColor: 'transparent',
@@ -221,7 +222,7 @@ const styles = StyleSheet.create({
     letterSpacing: 2.6,
   },
   modeLabelActive: {
-    color: colors.primary,
+    color: colors.surface,
   },
   inputs: {
     gap: 12,
@@ -236,6 +237,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceCard,
     paddingHorizontal: 18,
     paddingVertical: 16,
+    ...elevation.low,
   },
   summaryLabel: {
     color: colors.onSurfaceVariant,
@@ -308,12 +310,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     borderRadius: 22,
-    borderWidth: 1,
-    borderColor: 'rgba(0,240,255,0.45)',
-    backgroundColor: 'rgba(0,240,255,0.18)',
+    backgroundColor: colors.primary,
+    ...elevation.medium,
   },
   startButtonText: {
-    color: colors.primary,
+    color: colors.surface,
     fontFamily: fonts.sansBold,
     fontSize: 18,
     letterSpacing: 0.8,
