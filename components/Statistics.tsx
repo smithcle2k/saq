@@ -72,12 +72,9 @@ export const Statistics: React.FC<StatisticsProps> = ({ history, onClose }) => {
                       <Text style={styles.historyTime}>
                         {format(new Date(item.date), 'h:mm a')}
                       </Text>
-                      {item.mode ? (
-                        <View style={styles.modeChip}>
-                          <Text style={styles.modeChipText}>
-                            {item.mode}
-                            {item.rounds ? ` • ${item.rounds}` : ''}
-                          </Text>
+                      {item.rounds ? (
+                        <View style={styles.roundsChip}>
+                          <Text style={styles.roundsChipText}>{item.rounds} rounds</Text>
                         </View>
                       ) : null}
                       <Text style={styles.historyDuration}>
@@ -232,7 +229,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.sansMedium,
     fontSize: 14,
   },
-  modeChip: {
+  roundsChip: {
     borderRadius: 999,
     borderWidth: 1,
     borderColor: 'rgba(48,209,88,0.3)',
@@ -240,7 +237,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
-  modeChipText: {
+  roundsChipText: {
     color: colors.primary,
     fontFamily: fonts.sansSemiBold,
     fontSize: 11,
