@@ -1,7 +1,7 @@
 import { TimerPhase } from '../types';
 
 /**
- * Work-phase countdown beeps only kick in for longer efforts; short SAQ/reaction
+ * Work-phase countdown beeps only kick in for longer efforts; short reaction
  * rounds are dense with spoken cues and beeps would collide with them.
  */
 const MIN_WORK_TIME_FOR_COUNTDOWN = 10;

@@ -120,33 +120,20 @@ const CueFlash: React.FC<{ cue: string }> = ({ cue }) => {
   );
 };
 
-// Round Progress Dots Component
-interface RoundDotsProps {
+// Round count under the timer
+interface RoundCountProps {
   currentRound: number;
   totalRounds: number;
 }
 
-const RoundDots: React.FC<RoundDotsProps> = ({ currentRound, totalRounds }) => {
-  const maxDots = 12;
-  const showDots = Math.min(totalRounds, maxDots);
-
-  return (
-    <View style={styles.roundDots}>
-      {Array.from({ length: showDots }, (_, i) => (
-        <View
-          key={i}
-          style={[
-            styles.roundDot,
-            i < currentRound ? styles.roundDotComplete : styles.roundDotPending,
-          ]}
-        />
-      ))}
-      {totalRounds > maxDots ? (
-        <Text style={styles.roundOverflow}>+{totalRounds - maxDots}</Text>
-      ) : null}
-    </View>
-  );
-};
+const RoundCount: React.FC<RoundCountProps> = ({ currentRound, totalRounds }) => (
+  <View style={styles.roundCount} accessibilityLabel={`Round ${currentRound} of ${totalRounds}`}>
+    <Text style={styles.roundCountLabel}>ROUND</Text>
+    <Text style={styles.roundCountValue}>
+      {currentRound} / {totalRounds}
+    </Text>
+  </View>
+);
 
 const triggerPhaseHaptic = (phase: TimerPhase) => {
   try {
@@ -170,7 +157,6 @@ export const ActiveTimer: React.FC<ActiveTimerProps> = ({
   playAudioCue,
   stopAudioCues,
 }) => {
-  const isSaqMode = config.mode === 'SAQ';
   useWakeLock();
 
   const hapticsEnabled = useStore((state) => state.hapticsEnabled);
@@ -253,10 +239,10 @@ export const ActiveTimer: React.FC<ActiveTimerProps> = ({
 
   const helperText = useMemo(() => {
     if (phase === TimerPhase.PREP) return 'Get ready';
-    if (phase === TimerPhase.REST) return isSaqMode ? 'Reset and reload' : 'Breathe';
+    if (phase === TimerPhase.REST) return 'Breathe';
     if (phase === TimerPhase.COOL_DOWN) return 'Stretch it out';
     return '';
-  }, [isSaqMode, phase]);
+  }, [phase]);
 
   useEffect(() => {
     return () => {
@@ -331,10 +317,7 @@ export const ActiveTimer: React.FC<ActiveTimerProps> = ({
           >
             <Ionicons name="close" size={24} color={colors.onSurface} />
           </Pressable>
-          <Text style={styles.phaseLabel}>
-            {currentPhaseConfig.label}
-            {isSaqMode && phase !== TimerPhase.FINISHED ? ' • SAQ' : ''}
-          </Text>
+          <Text style={styles.phaseLabel}>{currentPhaseConfig.label}</Text>
           <View style={styles.roundBadge}>
             <Text style={styles.roundBadgeText}>
               {currentRound}/{config.rounds}
@@ -380,7 +363,7 @@ export const ActiveTimer: React.FC<ActiveTimerProps> = ({
                 <Text style={styles.helperText}>{helperText}</Text>
               )}
 
-              <RoundDots currentRound={currentRound} totalRounds={config.rounds} />
+              <RoundCount currentRound={currentRound} totalRounds={config.rounds} />
             </>
           )}
         </View>
@@ -493,7 +476,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   roundBadge: {
-    minWidth: 56,
+    minWidth: 72,
     alignItems: 'center',
     borderRadius: 999,
     backgroundColor: 'rgba(255,255,255,0.12)',
@@ -609,28 +592,22 @@ const styles = StyleSheet.create({
     fontSize: 20,
     textAlign: 'center',
   },
-  roundDots: {
-    flexDirection: 'row',
+  roundCount: {
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
+    gap: 4,
     marginTop: 24,
   },
-  roundDot: {
-    height: 10,
-    width: 10,
-    borderRadius: 5,
+  roundCountLabel: {
+    color: 'rgba(255,255,255,0.55)',
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 12,
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
   },
-  roundDotComplete: {
-    backgroundColor: colors.onSurface,
-  },
-  roundDotPending: {
-    backgroundColor: 'rgba(255,255,255,0.35)',
-  },
-  roundOverflow: {
-    color: 'rgba(255,255,255,0.66)',
-    fontFamily: fonts.sansMedium,
-    fontSize: 14,
+  roundCountValue: {
+    color: colors.onSurface,
+    fontFamily: fonts.monoBold,
+    fontSize: 20,
   },
   controls: {
     alignItems: 'center',

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { TimerConfig, TimerMode } from '../types';
+import { TimerConfig } from '../types';
 import { colors, elevation, fonts } from '../theme';
 import { NumberInput } from './NumberInput';
 import { calculateTotalTime, formatTime } from '../utils/timeUtils';
@@ -9,8 +9,6 @@ import { calculateTotalTime, formatTime } from '../utils/timeUtils';
 interface TimerSetupProps {
   config: TimerConfig;
   setConfig: React.Dispatch<React.SetStateAction<TimerConfig>>;
-  mode: TimerMode;
-  onModeChange: (mode: TimerMode) => void;
   onStart: () => void;
   onOpenSettings: () => void;
   onOpenStats: () => void;
@@ -19,8 +17,6 @@ interface TimerSetupProps {
 export const TimerSetup: React.FC<TimerSetupProps> = ({
   config,
   setConfig,
-  mode,
-  onModeChange,
   onStart,
   onOpenSettings,
   onOpenStats,
@@ -33,7 +29,6 @@ export const TimerSetup: React.FC<TimerSetupProps> = ({
   };
 
   const totalDuration = calculateTotalTime(config);
-  const isSaqMode = mode === 'SAQ';
 
   return (
     <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -42,32 +37,7 @@ export const TimerSetup: React.FC<TimerSetupProps> = ({
           <Ionicons name="timer-outline" size={22} color={colors.primary} />
           <Text style={styles.title}>Interval Trainer</Text>
         </View>
-        <Text style={styles.subtitle}>Choose a session mode and train</Text>
-      </View>
-
-      <View style={styles.modeCard}>
-        <Pressable
-          onPress={() => onModeChange('INTERVAL')}
-          style={({ pressed }) => [
-            styles.modeButton,
-            mode === 'INTERVAL' ? styles.modeButtonActive : styles.modeButtonInactive,
-            pressed && styles.pressed,
-          ]}
-        >
-          <Text style={[styles.modeLabel, mode === 'INTERVAL' && styles.modeLabelActive]}>
-            INTERVAL
-          </Text>
-        </Pressable>
-        <Pressable
-          onPress={() => onModeChange('SAQ')}
-          style={({ pressed }) => [
-            styles.modeButton,
-            mode === 'SAQ' ? styles.modeButtonActive : styles.modeButtonInactive,
-            pressed && styles.pressed,
-          ]}
-        >
-          <Text style={[styles.modeLabel, mode === 'SAQ' && styles.modeLabelActive]}>SAQ</Text>
-        </Pressable>
+        <Text style={styles.subtitle}>Set your times and train</Text>
       </View>
 
       <View style={styles.inputs}>
@@ -82,9 +52,8 @@ export const TimerSetup: React.FC<TimerSetupProps> = ({
           label="Work"
           value={config.workTime}
           onChange={(v) => updateConfig('workTime', v)}
-          step={isSaqMode ? 5 : 1}
-          min={isSaqMode ? 5 : 3}
-          readOnly
+          step={1}
+          min={3}
         />
         <NumberInput
           label="Rest"
@@ -100,7 +69,7 @@ export const TimerSetup: React.FC<TimerSetupProps> = ({
           onChange={(v) => updateConfig('rounds', v)}
           isTime={false}
           min={1}
-          max={99}
+          max={100}
         />
         <NumberInput
           label="Cool Down"
@@ -117,10 +86,6 @@ export const TimerSetup: React.FC<TimerSetupProps> = ({
 
       <View style={styles.sessionCard}>
         <Text style={styles.sessionHeading}>Session Summary</Text>
-        <View style={styles.sessionRow}>
-          <Text style={styles.sessionKey}>Mode</Text>
-          <Text style={styles.sessionValue}>{mode}</Text>
-        </View>
         <View style={styles.sessionRow}>
           <Text style={styles.sessionKey}>Rounds</Text>
           <Text style={styles.sessionValue}>{config.rounds}</Text>
@@ -188,41 +153,6 @@ const styles = StyleSheet.create({
     color: colors.onSurfaceVariant,
     fontFamily: fonts.sansMedium,
     fontSize: 14,
-  },
-  modeCard: {
-    flexDirection: 'row',
-    gap: 8,
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: colors.outline,
-    backgroundColor: colors.surfaceCard,
-    padding: 8,
-    ...elevation.low,
-  },
-  modeButton: {
-    flex: 1,
-    height: 56,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 18,
-    borderWidth: 1,
-  },
-  modeButtonActive: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primary,
-  },
-  modeButtonInactive: {
-    borderColor: 'transparent',
-    backgroundColor: 'rgba(0,0,0,0.12)',
-  },
-  modeLabel: {
-    color: colors.onSurfaceVariant,
-    fontFamily: fonts.sansSemiBold,
-    fontSize: 14,
-    letterSpacing: 2.6,
-  },
-  modeLabelActive: {
-    color: colors.surface,
   },
   inputs: {
     gap: 12,
