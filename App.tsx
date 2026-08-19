@@ -1,5 +1,5 @@
 import 'react-native-gesture-handler';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
@@ -21,7 +21,7 @@ import {
 } from '@expo-google-fonts/roboto-mono';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { TimerConfig, TimerMode, View as AppView, WorkoutHistoryItem } from './types';
+import { TimerConfig, View as AppView, WorkoutHistoryItem } from './types';
 import { TimerSetup } from './components/TimerSetup';
 import { ActiveTimer } from './components/ActiveTimer';
 import { Settings } from './components/Settings';
@@ -70,23 +70,13 @@ function App() {
   const [isHydrated, setIsHydrated] = useState(useStore.persist.hasHydrated());
   const hasPrimedInteractionRef = useRef(false);
 
-  const mode = useStore((state) => state.mode);
-  const modeConfigs = useStore((state) => state.modeConfigs);
-  const exercisesByMode = useStore((state) => state.exercisesByMode);
-  const exercises = exercisesByMode[mode];
+  const config = useStore((state) => state.timerConfig);
+  const exercises = useStore((state) => state.exercises);
 
   const history = useStore((state) => state.history);
   const tutorialSeen = useStore((state) => state.tutorialSeen);
-  const setMode = useStore((state) => state.setMode);
-  const setModeConfigs = useStore((state) => state.setModeConfigs);
-  const setExercisesStore = useStore((state) => state.setExercises);
-
-  const setExercises = useCallback(
-    (updater: React.SetStateAction<string[]>) => {
-      setExercisesStore(mode, updater);
-    },
-    [mode, setExercisesStore]
-  );
+  const setTimerConfig = useStore((state) => state.setTimerConfig);
+  const setExercises = useStore((state) => state.setExercises);
   const addHistoryItem = useStore((state) => state.addHistoryItem);
   const setTutorialSeen = useStore((state) => state.setTutorialSeen);
 
@@ -106,7 +96,6 @@ function App() {
 
   const { initializeAudioCues, playAudioCue, stopAudioCues } = useAudioCues();
 
-  const config = useMemo<TimerConfig>(() => ({ mode, ...modeConfigs[mode] }), [mode, modeConfigs]);
   const showTutorial = !tutorialSeen;
   const fontsLoaded = outfitFontsLoaded && monoFontsLoaded;
 
@@ -131,22 +120,7 @@ function App() {
   };
 
   const setConfig: React.Dispatch<React.SetStateAction<TimerConfig>> = (updater) => {
-    setModeConfigs((prev) => {
-      const currentConfig: TimerConfig = { mode, ...prev[mode] };
-      const nextConfig = typeof updater === 'function' ? updater(currentConfig) : updater;
-      const nextValues = {
-        prepTime: nextConfig.prepTime,
-        workTime: nextConfig.workTime,
-        restTime: nextConfig.restTime,
-        rounds: nextConfig.rounds,
-        coolDownTime: nextConfig.coolDownTime,
-      };
-
-      return {
-        ...prev,
-        [mode]: nextValues,
-      };
-    });
+    setTimerConfig((prev) => (typeof updater === 'function' ? updater(prev) : updater));
   };
 
   const saveHistory = (newItem: WorkoutHistoryItem) => {
@@ -163,17 +137,12 @@ function App() {
     setView('TIMER');
   };
 
-  const handleModeChange = (nextMode: TimerMode) => {
-    handleFirstInteraction();
-    setMode(nextMode);
-  };
-
   const handleFinish = () => {
     const duration = calculateTotalTime(config);
     saveHistory({
       date: new Date().toISOString(),
       duration,
-      mode,
+      mode: 'INTERVAL',
       rounds: config.rounds,
     });
     setView('SETUP');
@@ -220,8 +189,6 @@ function App() {
                   <TimerSetup
                     config={config}
                     setConfig={setConfig}
-                    mode={mode}
-                    onModeChange={handleModeChange}
                     onStart={handleStart}
                     onOpenSettings={() => {
                       handleFirstInteraction();
@@ -238,7 +205,6 @@ function App() {
                   <Settings
                     exercises={exercises}
                     setExercises={setExercises}
-                    mode={mode}
                     onClose={handleCloseSubView}
                   />
                 ) : null}

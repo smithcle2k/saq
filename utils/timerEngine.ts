@@ -1,6 +1,4 @@
 import { IntervalCue, IntervalCuePlan } from './intervalCuePlan';
-import { buildSaqCuePlan } from './saqCuePlan';
-import type { SpeakOptions } from './tts';
 import { TimerConfig, TimerPhase } from '../types';
 
 export interface TimerSnapshot {
@@ -14,7 +12,6 @@ export interface TimerSnapshot {
 export interface TransitionResult extends TimerSnapshot {
   announcement: string;
   shouldFinish: boolean;
-  announcementOptions?: SpeakOptions;
 }
 
 export const createInitialSnapshot = (config: TimerConfig): TimerSnapshot => ({
@@ -28,27 +25,9 @@ export const createInitialSnapshot = (config: TimerConfig): TimerSnapshot => ({
 export const getNextSnapshot = (
   current: TimerSnapshot,
   config: TimerConfig,
-  getRandomExercise: () => string,
-  getSaqPlan: () => IntervalCue[],
   getIntervalPlan: () => IntervalCuePlan
 ): TransitionResult => {
   if (current.phase === TimerPhase.PREP) {
-    if (config.mode === 'SAQ') {
-      const [firstCue, ...remainingCues] = getSaqPlan();
-      const firstLabel = firstCue?.label ?? 'Move';
-
-      return {
-        phase: TimerPhase.WORK,
-        timeRemaining: config.workTime,
-        currentRound: current.currentRound,
-        currentExercise: firstLabel,
-        cuePlan: remainingCues,
-        announcement: firstLabel,
-        shouldFinish: false,
-        announcementOptions: firstCue?.rate !== undefined ? { rate: firstCue.rate } : undefined,
-      };
-    }
-
     const intervalPlan = getIntervalPlan();
 
     return {
@@ -76,22 +55,6 @@ export const getNextSnapshot = (
 
   if (current.phase === TimerPhase.REST) {
     if (current.currentRound < config.rounds) {
-      if (config.mode === 'SAQ') {
-        const [firstCue, ...remainingCues] = getSaqPlan();
-        const firstLabel = firstCue?.label ?? 'Move';
-
-        return {
-          phase: TimerPhase.WORK,
-          timeRemaining: config.workTime,
-          currentRound: current.currentRound + 1,
-          currentExercise: firstLabel,
-          cuePlan: remainingCues,
-          announcement: firstLabel,
-          shouldFinish: false,
-          announcementOptions: firstCue?.rate !== undefined ? { rate: firstCue.rate } : undefined,
-        };
-      }
-
       const intervalPlan = getIntervalPlan();
 
       return {
@@ -151,6 +114,3 @@ export const decrementSnapshot = (snapshot: TimerSnapshot, seconds = 1): TimerSn
   ...snapshot,
   timeRemaining: Math.max(0, snapshot.timeRemaining - seconds),
 });
-
-export const buildSaqPlanFromExercises = (exercises: string[]) =>
-  buildSaqCuePlan(exercises) as IntervalCue[];

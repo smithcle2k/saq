@@ -1,7 +1,6 @@
 export type TimerMode = 'INTERVAL' | 'SAQ';
 
 export interface TimerConfig {
-  mode: TimerMode;
   prepTime: number;
   workTime: number;
   restTime: number;

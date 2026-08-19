@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { type SpeakOptions } from '../utils/tts';
 import { TimerConfig, TimerPhase } from '../types';
 import {
-  buildSaqPlanFromExercises,
   createInitialSnapshot,
   decrementSnapshot,
   getNextSnapshot,
@@ -43,12 +42,6 @@ export const useActiveTimerEngine = ({
   useEffect(() => {
     timerSnapshotRef.current = timerSnapshot;
   }, [timerSnapshot]);
-
-  const getRandomExercise = useCallback(() => {
-    if (exercises.length === 0) return 'Move';
-    const randomIndex = Math.floor(Math.random() * exercises.length);
-    return exercises[randomIndex];
-  }, [exercises]);
 
   const getIntervalPlan = useCallback(() => buildIntervalCuePlan(exercises), [exercises]);
 
@@ -103,13 +96,7 @@ export const useActiveTimerEngine = ({
       resetCueSchedule();
     }
 
-    const next = getNextSnapshot(
-      timerSnapshot,
-      config,
-      getRandomExercise,
-      () => buildSaqPlanFromExercises(exercises),
-      getIntervalPlan
-    );
+    const next = getNextSnapshot(timerSnapshot, config, getIntervalPlan);
     setTimerSnapshot({
       phase: next.phase,
       timeRemaining: next.timeRemaining,
@@ -120,22 +107,13 @@ export const useActiveTimerEngine = ({
     setCurrentCue(next.phase === TimerPhase.WORK ? next.currentExercise : '');
 
     if (next.announcement) {
-      onAnnounce(next.announcement, next.announcementOptions);
+      onAnnounce(next.announcement);
     }
 
     if (next.phase === TimerPhase.WORK && next.cuePlan.length > 0) {
       startCuePlan(next.cuePlan);
     }
-  }, [
-    timerSnapshot,
-    config,
-    getRandomExercise,
-    onAnnounce,
-    resetCueSchedule,
-    startCuePlan,
-    exercises,
-    getIntervalPlan,
-  ]);
+  }, [timerSnapshot, config, onAnnounce, resetCueSchedule, startCuePlan, getIntervalPlan]);
 
   const tick = useCallback(() => {
     const now = Date.now();

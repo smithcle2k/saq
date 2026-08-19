@@ -18,16 +18,16 @@ const sections: Section[] = [
     body: 'A distraction-free timer built for explosive interval training, boxing, sprints, and more. It counts down each phase and announces cues aloud so you never have to look at the screen.',
   },
   {
-    heading: 'Interval Mode vs SAQ Mode',
-    body: 'Interval Mode is the classic round-based timer. Each work round you hear one cue at random—Left, Right, Run, or Come Back. SAQ (Speed, Agility, Quickness) Mode is built for reactive change-of-direction work. Each 5-second work round fires five randomized cues: one at the start, then one each at 00:01, 00:02, 00:03, and 00:04.',
+    heading: 'How rounds work',
+    body: 'Each work round you hear one cue at random: Left, Right, Run, or Come Back. The timer counts down Prep, Work, Rest, and Cool Down so you can stay off the screen.',
   },
   {
     heading: 'Setting up your workout',
-    body: 'Use the − and + buttons to set your Prep, Work, Rest, and Cool Down times, as well as the number of rounds. In Interval mode, work time defaults to 5 seconds and is adjustable like the other phases. In SAQ mode, the work time is fixed at 5 seconds, but you can freely customize your rest time (minimum 15s) and the number of rounds to whatever you want.',
+    body: 'Use the − and + buttons to set your Prep, Work, Rest, and Cool Down times, as well as the number of rounds. Work time defaults to 5 seconds and is adjustable like the other phases. Rest time has a 15 second minimum.',
   },
   {
     heading: 'Customizing Cues',
-    body: 'In SAQ mode, open Settings (the gear icon) to manage your cue list: add custom directions or movements, delete ones you no longer want, and reorder them anytime. In Interval mode, Settings lets you turn each built-in cue on or off (see Settings).',
+    body: 'Open Settings (the gear icon) to turn each built-in cue on or off. At least one cue must stay enabled.',
   },
   {
     heading: 'During a workout',
