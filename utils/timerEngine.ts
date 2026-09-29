@@ -1,5 +1,6 @@
-import { IntervalCue, IntervalCuePlan } from './intervalCuePlan';
-import { TimerConfig, TimerPhase } from '../types';
+import type { IntervalCue, IntervalCuePlan } from './intervalCuePlan.ts';
+import { TimerPhase } from '../types.ts';
+import type { TimerConfig } from '../types.ts';
 
 export interface TimerSnapshot {
   phase: TimerPhase;
@@ -25,14 +26,14 @@ export const createInitialSnapshot = (config: TimerConfig): TimerSnapshot => ({
 export const getNextSnapshot = (
   current: TimerSnapshot,
   config: TimerConfig,
-  getIntervalPlan: () => IntervalCuePlan
+  getIntervalPlan: (roundNumber: number) => IntervalCuePlan
 ): TransitionResult => {
   if (current.phase === TimerPhase.PREP) {
-    const intervalPlan = getIntervalPlan();
+    const intervalPlan = getIntervalPlan(current.currentRound);
 
     return {
       phase: TimerPhase.WORK,
-      timeRemaining: config.workTime,
+      timeRemaining: intervalPlan.workDurationSeconds ?? config.workTime,
       currentRound: current.currentRound,
       currentExercise: intervalPlan.currentExercise,
       cuePlan: intervalPlan.cuePlan,
@@ -55,11 +56,11 @@ export const getNextSnapshot = (
 
   if (current.phase === TimerPhase.REST) {
     if (current.currentRound < config.rounds) {
-      const intervalPlan = getIntervalPlan();
+      const intervalPlan = getIntervalPlan(current.currentRound + 1);
 
       return {
         phase: TimerPhase.WORK,
-        timeRemaining: config.workTime,
+        timeRemaining: intervalPlan.workDurationSeconds ?? config.workTime,
         currentRound: current.currentRound + 1,
         currentExercise: intervalPlan.currentExercise,
         cuePlan: intervalPlan.cuePlan,

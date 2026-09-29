@@ -21,17 +21,30 @@ import {
 } from '@expo-google-fonts/roboto-mono';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { TimerConfig, View as AppView, WorkoutHistoryItem } from './types';
+import { TimerConfig, View as AppView } from './types';
+import type { SessionConfigSnapshot } from './types';
 import { TimerSetup } from './components/TimerSetup';
 import { ActiveTimer } from './components/ActiveTimer';
 import { Settings } from './components/Settings';
 import { Statistics } from './components/Statistics';
 import { Tutorial } from './components/Tutorial';
 import { gradients, colors } from './theme';
-import { calculateTotalTime } from './utils/timeUtils';
 import { initializeSpeech } from './utils/tts';
 import { useAudioCues } from './utils/audioCues';
 import { useStore } from './store';
+import { buildSessionPlan } from './utils/drillPlan';
+import type { SessionPlan } from './utils/drillPlan';
+import { buildCompletedHistoryItem, createSessionId } from './utils/sessionHistory';
+import type { SessionDeliveryLog } from './utils/sessionHistory';
+import { attachRoundLogs } from './utils/repLogging';
+import type { RoundLogBook, SessionNotesInput } from './utils/repLogging';
+import { getReactiveSessionConfig, getReactiveSetupError } from './utils/reactiveSession';
+
+/** Frozen at Start so the running workout and its record describe what actually ran. */
+interface ActiveSession {
+  snapshot: SessionConfigSnapshot;
+  plan: SessionPlan;
+}
 
 class ErrorBoundary extends React.Component<
   { children: React.ReactNode },
@@ -67,17 +80,18 @@ class ErrorBoundary extends React.Component<
 
 function App() {
   const [view, setView] = useState<AppView>('SETUP');
+  const [activeSession, setActiveSession] = useState<ActiveSession | null>(null);
   const [isHydrated, setIsHydrated] = useState(useStore.persist.hasHydrated());
   const hasPrimedInteractionRef = useRef(false);
 
   const config = useStore((state) => state.timerConfig);
-  const exercises = useStore((state) => state.exercises);
+  const cueOutputMode = useStore((state) => state.cueOutputMode);
 
   const history = useStore((state) => state.history);
   const tutorialSeen = useStore((state) => state.tutorialSeen);
   const setTimerConfig = useStore((state) => state.setTimerConfig);
-  const setExercises = useStore((state) => state.setExercises);
-  const addHistoryItem = useStore((state) => state.addHistoryItem);
+  const saveCompletedSession = useStore((state) => state.saveCompletedSession);
+  const updateSessionNotes = useStore((state) => state.updateSessionNotes);
   const setTutorialSeen = useStore((state) => state.setTutorialSeen);
 
   const outfitFontsLoaded = useOutfitFonts({
@@ -94,7 +108,7 @@ function App() {
     RobotoMono_700Bold,
   })[0];
 
-  const { initializeAudioCues, playAudioCue, stopAudioCues } = useAudioCues();
+  const { initializeAudioCues, playAudioCue, playSpokenCue, stopAudioCues } = useAudioCues();
 
   const showTutorial = !tutorialSeen;
   const fontsLoaded = outfitFontsLoaded && monoFontsLoaded;
@@ -123,33 +137,65 @@ function App() {
     setTimerConfig((prev) => (typeof updater === 'function' ? updater(prev) : updater));
   };
 
-  const saveHistory = (newItem: WorkoutHistoryItem) => {
-    addHistoryItem(newItem);
-  };
-
   const handleDismissTutorial = () => {
     handleFirstInteraction();
     setTutorialSeen(true);
   };
 
-  const handleStart = async () => {
+  const beginSession = async (session: ActiveSession) => {
     await primeMedia(true);
+    setActiveSession(session);
     setView('TIMER');
   };
 
-  const handleFinish = () => {
-    const duration = calculateTotalTime(config);
-    saveHistory({
-      date: new Date().toISOString(),
-      duration,
-      mode: 'INTERVAL',
-      rounds: config.rounds,
+  const handleStart = async () => {
+    const snapshot = getReactiveSessionConfig({
+      timerConfig: config,
+      cueOutputMode,
     });
+    if (getReactiveSetupError(snapshot)) return;
+    const sessionInput = {
+      drillSettings: snapshot.drillSettings,
+      cueSettings: snapshot.cueSettings,
+      enabledCues: snapshot.enabledCues,
+      config: snapshot.timerConfig,
+    };
+    await beginSession({
+      snapshot,
+      plan: buildSessionPlan({ ...sessionInput, sessionId: createSessionId() }),
+    });
+  };
+
+  // Saved once, on first reaching FINISHED; DONE or exit afterwards cannot duplicate or discard it.
+  // Round logs are all closed by then: the final REST ends before FINISHED.
+  const handleComplete = (log: SessionDeliveryLog, roundLogs: RoundLogBook) => {
+    if (!activeSession) return;
+    saveCompletedSession(
+      attachRoundLogs(
+        buildCompletedHistoryItem({
+          plan: activeSession.plan,
+          snapshot: activeSession.snapshot,
+          log,
+          completedAt: new Date(),
+        }),
+        roundLogs
+      )
+    );
+  };
+
+  const handleSaveNotes = (notes: SessionNotesInput) => {
+    if (!activeSession) return;
+    updateSessionNotes(activeSession.plan.sessionId, notes);
+  };
+
+  const handleFinish = () => {
+    setActiveSession(null);
     setView('SETUP');
   };
 
   const handleExit = () => {
     stopAudioCues();
+    setActiveSession(null);
     setView('SETUP');
   };
 
@@ -173,13 +219,18 @@ function App() {
       <SafeAreaProvider>
         <StatusBar style="light" />
         <View style={styles.flex} onTouchStart={handleFirstInteraction}>
-          {view === 'TIMER' ? (
+          {view === 'TIMER' && activeSession ? (
             <ActiveTimer
-              config={config}
-              exercises={exercises}
+              config={activeSession.snapshot.timerConfig}
+              plan={activeSession.plan}
+              drillSettings={activeSession.snapshot.drillSettings}
+              cueOutputMode={activeSession.snapshot.cueOutputMode}
+              onComplete={handleComplete}
+              onSaveNotes={handleSaveNotes}
               onFinish={handleFinish}
               onExit={handleExit}
               playAudioCue={playAudioCue}
+              playSpokenCue={playSpokenCue}
               stopAudioCues={stopAudioCues}
             />
           ) : (
@@ -201,13 +252,7 @@ function App() {
                   />
                 ) : null}
 
-                {view === 'SETTINGS' ? (
-                  <Settings
-                    exercises={exercises}
-                    setExercises={setExercises}
-                    onClose={handleCloseSubView}
-                  />
-                ) : null}
+                {view === 'SETTINGS' ? <Settings onClose={handleCloseSubView} /> : null}
 
                 {view === 'STATS' ? (
                   <Statistics history={history} onClose={handleCloseSubView} />

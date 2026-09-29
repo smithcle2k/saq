@@ -10,6 +10,7 @@
     "android": "expo run:android",
     "web": "expo start --web",
     "build": "expo export --platform web && node build-pwa.js",
+    "test": "node --experimental-transform-types --test utils/*.test.ts",
     "lint": "eslint ."
   },
   "dependencies": {

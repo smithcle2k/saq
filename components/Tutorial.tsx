@@ -14,20 +14,20 @@ interface Section {
 
 const sections: Section[] = [
   {
-    heading: 'What is Interval Trainer?',
-    body: 'A distraction-free timer built for explosive interval training, boxing, sprints, and more. It counts down each phase and announces cues aloud so you never have to look at the screen.',
+    heading: 'What is Reactive Agility?',
+    body: 'A cue-driven workout for reacting to an unknown direction. It counts down each phase and announces cues aloud so you can move without watching the screen.',
   },
   {
     heading: 'How rounds work',
-    body: 'Each work round you hear one cue at random: Left, Right, Run, or Come Back. The timer counts down Prep, Work, Rest, and Cool Down so you can stay off the screen.',
+    body: 'After Go, each work round gives one random cue. Some rounds give a different second cue that changes your target. The second cue may not arrive, and its timing varies. The work countdown stays hidden so the round does not reveal how many cues are coming.',
   },
   {
     heading: 'Setting up your workout',
-    body: 'Use the − and + buttons to set your Prep, Work, Rest, and Cool Down times, as well as the number of rounds. Work time defaults to 5 seconds and is adjustable like the other phases. Rest time has a 15 second minimum.',
+    body: 'Set the number of rounds and rest time. The workout starts with 10 seconds of prep. One-cue rounds last 5 seconds; two-cue rounds last 8 seconds. Rest time has a 15 second minimum.',
   },
   {
-    heading: 'Customizing Cues',
-    body: 'Open Settings (the gear icon) to turn each built-in cue on or off. At least one cue must stay enabled.',
+    heading: 'Cue output',
+    body: 'The app uses Left, Right, Run, and Come Back at random. Open Settings to choose voice, visual, or both, and to control sound effects and vibration.',
   },
   {
     heading: 'During a workout',

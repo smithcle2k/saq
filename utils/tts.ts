@@ -1,6 +1,8 @@
 import { Platform } from 'react-native';
 import * as Speech from 'expo-speech';
 import { useStore } from '../store';
+import { shouldPlayCueVoice } from './cueOutput';
+import type { CueOutputMode } from '../types';
 
 let voicesReadyPromise: Promise<void> | null = null;
 let preferredVoice: string | undefined;
@@ -160,17 +162,20 @@ export const initializeSpeech = (options: InitializeSpeechOptions = {}) => {
   });
 };
 
-export const speak = (text: string, options: SpeakOptions = {}) => {
-  if (!text?.trim()) return;
-  if (!useStore.getState().voiceEnabled) return;
+/** Speaks non-cue guidance using the persisted cue output mode. */
+export const speak = (text: string, options: SpeakOptions = {}) =>
+  speakCue(text, useStore.getState().cueOutputMode, options);
 
-  const message = text.trim();
-  const interrupt = options.interrupt ?? true;
-  const afterPreviousEndMs = options.afterPreviousEndMs ?? 0;
-  const rate = options.rate ?? 1;
-
+/** Output mode is the only voice gate; the legacy voice boolean is migrated into it. */
+export const speakCue = (text: string, outputMode: CueOutputMode, options: SpeakOptions = {}) => {
+  if (!text?.trim() || !shouldPlayCueVoice(outputMode)) return;
   void loadVoices();
-  void speakNow(message, interrupt, afterPreviousEndMs, rate);
+  void speakNow(
+    text.trim(),
+    options.interrupt ?? true,
+    options.afterPreviousEndMs ?? 0,
+    options.rate ?? 1
+  );
 };
 
 export const stopSpeech = () => {

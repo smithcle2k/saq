@@ -9,6 +9,47 @@ import {
   formatAccumulatedDuration,
   groupHistoryByDay,
 } from '../utils/historyUtils';
+import { DRILL_LABELS } from '../utils/drillPlan';
+import { PerformanceStats } from './PerformanceStats';
+import { formatTime } from '../utils/timeUtils';
+
+const countLoggedRounds = (item: WorkoutHistoryItem) =>
+  item.session?.rounds.filter((round) => round.outcome).length ?? 0;
+
+const Chip: React.FC<{ label: string }> = ({ label }) => (
+  <View style={styles.roundsChip}>
+    <Text style={styles.roundsChipText}>{label}</Text>
+  </View>
+);
+
+const HistoryRow: React.FC<{ item: WorkoutHistoryItem }> = ({ item }) => {
+  return (
+    <View style={styles.historyItem}>
+      <View style={styles.historyRow}>
+        <Text style={styles.historyTime}>{format(new Date(item.date), 'h:mm a')}</Text>
+        {item.drillType ? <Chip label={DRILL_LABELS[item.drillType]} /> : null}
+        {item.session ? (
+          <Chip label={`${countLoggedRounds(item)}/${item.session.rounds.length} logged`} />
+        ) : item.rounds ? (
+          <Chip label={`${item.rounds} rounds`} />
+        ) : null}
+        {item.replayOfSessionId ? <Chip label="Replay" /> : null}
+        {item.progressionStage ? <Chip label={`Stage ${item.progressionStage}`} /> : null}
+        {item.warmupSeconds ? <Chip label={`Warm-up ${formatTime(item.warmupSeconds)}`} /> : null}
+        {item.notes ? (
+          <Ionicons
+            name="document-text-outline"
+            size={16}
+            color={colors.onSurfaceVariant}
+            accessibilityLabel="Has notes"
+          />
+        ) : null}
+        <View style={styles.flex} />
+        <Text style={styles.historyDuration}>{formatAccumulatedDuration(item.duration)}</Text>
+      </View>
+    </View>
+  );
+};
 
 interface StatisticsProps {
   history: WorkoutHistoryItem[];
@@ -31,32 +72,34 @@ export const Statistics: React.FC<StatisticsProps> = ({ history, onClose }) => {
         <View style={styles.headerSpacer} />
       </View>
 
-      <View style={styles.statsRow}>
-        <View style={styles.statCard}>
-          <Text style={[styles.statValue, { color: colors.primary }]}>{totalWorkouts}</Text>
-          <Text style={styles.statLabel}>Workouts</Text>
-        </View>
-        <View style={styles.statCard}>
-          <View style={styles.streakRow}>
-            <Text style={[styles.statValue, { color: colors.prep }]}>{currentStreak}</Text>
-            <Ionicons name="flame" size={18} color={colors.prep} />
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        <View style={styles.statsRow}>
+          <View style={styles.statCard}>
+            <Text style={[styles.statValue, { color: colors.primary }]}>{totalWorkouts}</Text>
+            <Text style={styles.statLabel}>Workouts</Text>
           </View>
-          <Text style={styles.statLabel}>Day Streak</Text>
+          <View style={styles.statCard}>
+            <View style={styles.streakRow}>
+              <Text style={[styles.statValue, { color: colors.prep }]}>{currentStreak}</Text>
+              <Ionicons name="flame" size={18} color={colors.prep} />
+            </View>
+            <Text style={styles.statLabel}>Day Streak</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={[styles.statValueSmall, { color: colors.work }]}>
+              {formatAccumulatedDuration(totalSeconds)}
+            </Text>
+            <Text style={styles.statLabel}>Total Time</Text>
+          </View>
         </View>
-        <View style={styles.statCard}>
-          <Text style={[styles.statValueSmall, { color: colors.work }]}>
-            {formatAccumulatedDuration(totalSeconds)}
-          </Text>
-          <Text style={styles.statLabel}>Total Time</Text>
+
+        <PerformanceStats history={history} />
+
+        <View style={styles.historyHeading}>
+          <Ionicons name="time-outline" size={16} color={colors.primary} />
+          <Text style={styles.historyHeadingText}>Activity History</Text>
         </View>
-      </View>
 
-      <View style={styles.historyHeading}>
-        <Ionicons name="time-outline" size={16} color={colors.primary} />
-        <Text style={styles.historyHeadingText}>Activity History</Text>
-      </View>
-
-      <ScrollView showsVerticalScrollIndicator={false}>
         {history.length === 0 ? (
           <View style={styles.emptyCard}>
             <Text style={styles.emptyText}>No workouts yet</Text>
@@ -68,19 +111,7 @@ export const Statistics: React.FC<StatisticsProps> = ({ history, onClose }) => {
                 <Text style={styles.historyDate}>{label}</Text>
                 <View style={styles.historyItems}>
                   {items.map((item, index) => (
-                    <View key={`${item.date}-${index}`} style={styles.historyItem}>
-                      <Text style={styles.historyTime}>
-                        {format(new Date(item.date), 'h:mm a')}
-                      </Text>
-                      {item.rounds ? (
-                        <View style={styles.roundsChip}>
-                          <Text style={styles.roundsChipText}>{item.rounds} rounds</Text>
-                        </View>
-                      ) : null}
-                      <Text style={styles.historyDuration}>
-                        {formatAccumulatedDuration(item.duration)}
-                      </Text>
-                    </View>
+                    <HistoryRow key={item.id ?? `${item.date}-${index}`} item={item} />
                   ))}
                 </View>
               </View>
@@ -125,6 +156,9 @@ const styles = StyleSheet.create({
   headerSpacer: {
     width: 48,
   },
+  scrollContent: {
+    paddingBottom: 16,
+  },
   statsRow: {
     flexDirection: 'row',
     gap: 12,
@@ -164,6 +198,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   historyHeading: {
+    marginTop: 24,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
@@ -213,16 +248,27 @@ const styles = StyleSheet.create({
   historyItems: {
     gap: 8,
   },
+  flex: {
+    flexGrow: 1,
+  },
   historyItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 10,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.05)',
     backgroundColor: 'rgba(0,0,0,0.2)',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingLeft: 16,
+    paddingRight: 8,
+    paddingVertical: 8,
+  },
+  historyRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 8,
+  },
+  pressed: {
+    opacity: 0.82,
   },
   historyTime: {
     color: colors.onSurfaceVariant,

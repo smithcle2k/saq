@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Interval Trainer",
+    "name": "Reactive Agility",
     "slug": "interval-trainer",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -12,12 +12,19 @@
     },
     "assetBundlePatterns": ["**/*"],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.runtopetes.interval-trainer"
     },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#030305"
-      }
+      },
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+      ]
     },
     "web": {
       "bundler": "metro"

@@ -1,26 +1,66 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
-import { Animated, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  Animated,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
-import { TimerConfig, TimerPhase } from '../types';
+import { CueOutputMode, TimerConfig, TimerPhase } from '../types';
 import { colors, fonts, gradients } from '../theme';
-import { calculateTotalTime, formatTime } from '../utils/timeUtils';
-import { shouldAnnounceRestFiveSeconds, shouldPlayCountdownBeep } from '../utils/timerAlerts';
-import { speak, stopSpeech } from '../utils/tts';
+import { formatTime } from '../utils/timeUtils';
+import {
+  isNearCueEvent,
+  shouldAnnounceRestFiveSeconds,
+  shouldPlayCountdownBeep,
+} from '../utils/timerAlerts';
+import { speakCue, stopSpeech } from '../utils/tts';
+import type { SpeakOptions } from '../utils/tts';
+import {
+  routeSpokenCue,
+  shouldPlayCueVoice,
+  shouldPlayWorkWhistle,
+  shouldShowCueVisual,
+} from '../utils/cueOutput';
 import { AudioCueName } from '../utils/audioCues';
 import { useActiveTimerEngine } from '../hooks/useActiveTimerEngine';
+import type { VisibleCue } from '../hooks/useActiveTimerEngine';
 import { useWakeLock } from '../hooks/useWakeLock';
 import { useStore } from '../store';
+import { getDrillInstructions, isPreviewSecond } from '../utils/drillPlan';
+import type { SessionPlan } from '../utils/drillPlan';
+import type { DrillSettings } from '../types';
+import type { SessionDeliveryLog } from '../utils/sessionHistory';
+import { applyRoundLogEdit, createRoundLogBook, getOpenLogRoundId } from '../utils/repLogging';
+import type { RoundLogAction, RoundLogBook, SessionNotesInput } from '../utils/repLogging';
+import { RestRepLog } from './RestRepLog';
+import { SessionNotes } from './SessionNotes';
 
 interface ActiveTimerProps {
   config: TimerConfig;
-  exercises: string[];
+  plan: SessionPlan;
+  drillSettings: DrillSettings;
+  /** Replays repeat a saved cue sequence; said once in PREP so it is never mistaken for new. */
+  isReplay?: boolean;
+  cueOutputMode: CueOutputMode;
+  /** Called once when FINISHED is first reached; the session is saved then. */
+  onComplete: (log: SessionDeliveryLog, roundLogs: RoundLogBook) => void;
+  /** Adds optional notes to the session already saved at FINISHED. */
+  onSaveNotes: (notes: SessionNotesInput) => void;
   onFinish: () => void;
   onExit: () => void;
   playAudioCue: (name: AudioCueName) => void;
+  playSpokenCue: (text: string) => boolean;
   stopAudioCues: () => void;
 }
 
@@ -92,8 +132,15 @@ const ProgressRing: React.FC<ProgressRingProps> = ({ progress }) => (
   </Svg>
 );
 
-/** Spoken cue rendered large with a pop-in each time it changes. */
-const CueFlash: React.FC<{ cue: string }> = ({ cue }) => {
+const CUE_ICONS: Record<string, React.ComponentProps<typeof Ionicons>['name']> = {
+  Left: 'arrow-back',
+  Right: 'arrow-forward',
+  Run: 'arrow-up',
+  'Come Back': 'return-up-back',
+};
+
+/** Distance-readable cue: large directional glyph plus the word, popping in per event. */
+const CueDisplay: React.FC<{ cue: VisibleCue | null; size: number }> = ({ cue, size }) => {
   const [scale] = useState(() => new Animated.Value(1));
 
   useEffect(() => {
@@ -107,18 +154,43 @@ const CueFlash: React.FC<{ cue: string }> = ({ cue }) => {
     }).start();
   }, [cue, scale]);
 
-  if (!cue) return null;
+  // Nothing — not even an accessibility label — exists before the cue fires.
+  if (!cue) return <View style={[styles.cuePlaceholder, { height: size }]} />;
+
+  const isCorrection = cue.role === 'CORRECTION' || cue.role === 'CHANGE';
 
   return (
-    <Animated.Text
-      style={[styles.exerciseText, { transform: [{ scale }] }]}
-      numberOfLines={2}
-      adjustsFontSizeToFit
+    <Animated.View
+      style={[styles.cueDisplay, isCorrection && styles.cueCorrection, { transform: [{ scale }] }]}
+      accessible
+      accessibilityLiveRegion="assertive"
+      accessibilityLabel={isCorrection ? `Change: ${cue.label}` : `Cue: ${cue.label}`}
     >
-      {cue}
-    </Animated.Text>
+      {isCorrection ? <Text style={styles.cueCorrectionLabel}>CHANGE</Text> : null}
+      <Ionicons
+        name={CUE_ICONS[cue.label] ?? 'arrow-up'}
+        size={size}
+        color={isCorrection ? colors.surface : colors.onSurface}
+      />
+      <Text
+        style={[styles.exerciseText, isCorrection && styles.cueCorrectionText]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+      >
+        {cue.label.toUpperCase()}
+      </Text>
+    </Animated.View>
   );
 };
+
+/** Upcoming planned cue, shown only once its preview has been delivered. */
+const PreviewDisplay: React.FC<{ label: string }> = ({ label }) => (
+  <View style={styles.previewWrap} accessible accessibilityLabel={`Next round: ${label}`}>
+    <Text style={styles.previewHeading}>NEXT</Text>
+    <Ionicons name={CUE_ICONS[label] ?? 'arrow-up'} size={72} color={colors.onSurface} />
+    <Text style={styles.previewText}>{label.toUpperCase()}</Text>
+  </View>
+);
 
 // Round count under the timer
 interface RoundCountProps {
@@ -151,10 +223,16 @@ const triggerPhaseHaptic = (phase: TimerPhase) => {
 
 export const ActiveTimer: React.FC<ActiveTimerProps> = ({
   config,
-  exercises,
+  plan,
+  drillSettings,
+  isReplay = false,
+  cueOutputMode,
+  onComplete,
+  onSaveNotes,
   onFinish,
   onExit,
   playAudioCue,
+  playSpokenCue,
   stopAudioCues,
 }) => {
   useWakeLock();
@@ -164,30 +242,122 @@ export const ActiveTimer: React.FC<ActiveTimerProps> = ({
   const hasAnnouncedRestFiveSecondsRef = useRef(false);
   const prevPhaseRef = useRef<TimerPhase | null>(null);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
-  const { phase, timeRemaining, currentRound, currentCue, isPaused, togglePause } =
-    useActiveTimerEngine({
-      config,
-      exercises,
-      onAnnounce: (message, options) =>
-        speak(message, {
-          interrupt: options?.interrupt ?? true,
-          afterPreviousEndMs: options?.afterPreviousEndMs ?? 0,
-          rate: options?.rate,
-        }),
-    });
+  const { width: windowWidth } = useWindowDimensions();
+  const cueIconSize = Math.min(220, Math.max(140, windowWidth * 0.5));
+  const [roundLogs, setRoundLogs] = useState<RoundLogBook>(createRoundLogBook);
+  // Read synchronously at FINISHED so a final-REST tap is never lost to a pending render.
+  const roundLogsRef = useRef<RoundLogBook>(roundLogs);
+
+  const handleComplete = useCallback(
+    (log: SessionDeliveryLog) => onComplete(log, roundLogsRef.current),
+    [onComplete]
+  );
+
+  /** One output event: recorded clip if available, otherwise TTS; nothing in visual-only mode. */
+  const announce = useCallback(
+    (message: string, options?: SpeakOptions) => {
+      routeSpokenCue(message, cueOutputMode, {
+        playClip: playSpokenCue,
+        speak: (text) =>
+          speakCue(text, cueOutputMode, {
+            interrupt: options?.interrupt ?? true,
+            afterPreviousEndMs: options?.afterPreviousEndMs ?? 0,
+            rate: options?.rate,
+          }),
+      });
+    },
+    [cueOutputMode, playSpokenCue]
+  );
+
+  const {
+    phase,
+    timeRemaining,
+    currentRound,
+    currentCue,
+    previewCue,
+    cuePlan,
+    isPaused,
+    togglePause,
+    getTimerSnapshot,
+  } = useActiveTimerEngine({
+    config,
+    plan,
+    onAnnounce: announce,
+    onCueDelivered: (cue) => {
+      if (cue.role !== 'CORRECTION' && cue.role !== 'CHANGE') return;
+      // Short accent marks a correction; follows the sound-effects and vibration toggles.
+      playAudioCue('beep');
+      if (hapticsEnabled) {
+        try {
+          void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        } catch {
+          // Haptics unavailable — ignore.
+        }
+      }
+    },
+    // Queued (not interrupting) so "5 Seconds" is never cut off.
+    onPreview: (round) => {
+      if (round.preview) announce(round.preview.label, { interrupt: false });
+    },
+    onComplete: handleComplete,
+  });
+
+  const openLogRoundId = getOpenLogRoundId(plan, phase, currentRound, config.restTime);
+
+  /** Edits are bound to the round shown; the engine's latest snapshot decides if it is still open. */
+  const editRoundLog = (roundId: string, action: RoundLogAction) => {
+    const snapshot = getTimerSnapshot();
+    const next = applyRoundLogEdit(
+      roundLogsRef.current,
+      { ...action, sessionId: plan.sessionId, roundId },
+      {
+        sessionId: plan.sessionId,
+        openRoundId: getOpenLogRoundId(
+          plan,
+          snapshot.phase,
+          snapshot.currentRound,
+          config.restTime
+        ),
+      }
+    );
+    if (next === roundLogsRef.current) return;
+    roundLogsRef.current = next;
+    setRoundLogs(next);
+  };
+  const loggedRoundCount = Array.from(roundLogs.values()).filter((log) => log.outcome).length;
 
   useEffect(() => {
     if (hasAnnouncedPrepRef.current) return;
     hasAnnouncedPrepRef.current = true;
-    speak('Get ready', { interrupt: true });
-  }, []);
+    speakCue('Get ready', cueOutputMode, { interrupt: true });
+  }, [cueOutputMode]);
 
-  // Synchronized countdown beeps
+  // Pausing silences any queued or in-flight speech and clips.
   useEffect(() => {
-    if (shouldPlayCountdownBeep(phase, timeRemaining, isPaused, config.workTime)) {
-      playAudioCue('beep');
+    if (!isPaused) return;
+    stopAudioCues();
+    void stopSpeech();
+  }, [isPaused, stopAudioCues]);
+
+  // Synchronized countdown beeps; cue speech has priority over a colliding beep.
+  useEffect(() => {
+    if (!shouldPlayCountdownBeep(phase, timeRemaining, isPaused, config.workTime)) return;
+    const speechCompetes = shouldPlayCueVoice(cueOutputMode);
+    if (speechCompetes && isPreviewSecond(plan, config, phase, currentRound, timeRemaining)) return;
+    if (
+      speechCompetes &&
+      phase === TimerPhase.WORK &&
+      isNearCueEvent(
+        (config.workTime - timeRemaining) * 1000,
+        cuePlan.map((cue) => cue.offsetMs)
+      )
+    ) {
+      return;
     }
-  }, [timeRemaining, phase, isPaused, playAudioCue, config.workTime]);
+    playAudioCue('beep');
+    // Only fire on countdown second changes, not on unrelated re-renders.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timeRemaining, phase, isPaused]);
 
   useEffect(() => {
     if (phase !== TimerPhase.REST) {
@@ -204,9 +374,9 @@ export const ActiveTimer: React.FC<ActiveTimerProps> = ({
       )
     ) {
       hasAnnouncedRestFiveSecondsRef.current = true;
-      speak('5 Seconds', { interrupt: true });
+      speakCue('5 Seconds', cueOutputMode, { interrupt: true });
     }
-  }, [timeRemaining, phase, isPaused]);
+  }, [timeRemaining, phase, isPaused, cueOutputMode]);
 
   // Phase entrance sounds + haptics
   useEffect(() => {
@@ -214,7 +384,8 @@ export const ActiveTimer: React.FC<ActiveTimerProps> = ({
 
     if (prevPhaseRef.current && prevPhaseRef.current !== phase) {
       if (phase === TimerPhase.WORK) {
-        playAudioCue('whistle');
+        // Spoken "Go" has priority over the whistle at WORK entry.
+        if (shouldPlayWorkWhistle(cueOutputMode)) playAudioCue('whistle');
       } else if (phase === TimerPhase.REST || phase === TimerPhase.COOL_DOWN) {
         playAudioCue('buzzer');
       }
@@ -224,7 +395,7 @@ export const ActiveTimer: React.FC<ActiveTimerProps> = ({
       }
     }
     prevPhaseRef.current = phase;
-  }, [phase, isPaused, playAudioCue, hapticsEnabled]);
+  }, [phase, isPaused, playAudioCue, hapticsEnabled, cueOutputMode]);
 
   const currentPhaseConfig = phaseConfig[phase];
   const isCountdown = timeRemaining <= 3 && timeRemaining > 0;
@@ -238,11 +409,20 @@ export const ActiveTimer: React.FC<ActiveTimerProps> = ({
   }, [phase, config]);
 
   const helperText = useMemo(() => {
-    if (phase === TimerPhase.PREP) return 'Get ready';
-    if (phase === TimerPhase.REST) return 'Breathe';
+    if (phase === TimerPhase.PREP) {
+      const instructions = getDrillInstructions(drillSettings);
+      return isReplay
+        ? `Replay: same cue sequence as the saved session. ${instructions}`
+        : instructions;
+    }
+    if (phase === TimerPhase.REST) return openLogRoundId ? '' : 'Breathe';
     if (phase === TimerPhase.COOL_DOWN) return 'Stretch it out';
     return '';
-  }, [phase]);
+  }, [phase, drillSettings, openLogRoundId, isReplay]);
+  const showStoppingInstruction =
+    Boolean(drillSettings.stoppingInstruction) &&
+    (phase === TimerPhase.PREP || phase === TimerPhase.REST);
+  const showVisualCues = shouldShowCueVisual(cueOutputMode);
 
   useEffect(() => {
     return () => {
@@ -325,48 +505,96 @@ export const ActiveTimer: React.FC<ActiveTimerProps> = ({
           </View>
         </View>
 
-        <View style={styles.main}>
-          {phase === TimerPhase.FINISHED ? (
-            <View style={styles.finishWrap}>
-              <Text style={styles.finishTitle}>GREAT JOB!</Text>
-              <Text style={styles.finishSubtitle}>Workout Complete</Text>
-              <View style={styles.finishStats}>
-                <View style={styles.finishStat}>
-                  <Text style={styles.finishStatValue}>{config.rounds}</Text>
-                  <Text style={styles.finishStatLabel}>Rounds</Text>
+        <KeyboardAvoidingView
+          style={styles.flex}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <ScrollView
+            contentContainerStyle={styles.main}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            {phase === TimerPhase.FINISHED ? (
+              <View style={styles.finishWrap}>
+                <Text style={styles.finishTitle}>GREAT JOB!</Text>
+                <Text style={styles.finishSubtitle}>Workout Complete</Text>
+                <View style={styles.finishStats}>
+                  <View style={styles.finishStat}>
+                    <Text style={styles.finishStatValue}>{config.rounds}</Text>
+                    <Text style={styles.finishStatLabel}>Rounds</Text>
+                  </View>
+                  <View style={styles.finishStatDivider} />
+                  <View style={styles.finishStat}>
+                    <Text style={styles.finishStatValue}>
+                      {loggedRoundCount}/{config.rounds}
+                    </Text>
+                    <Text style={styles.finishStatLabel}>Logged</Text>
+                  </View>
                 </View>
-                <View style={styles.finishStatDivider} />
-                <View style={styles.finishStat}>
-                  <Text style={styles.finishStatValue}>
-                    {formatTime(calculateTotalTime(config))}
+                <Text style={styles.savedHint}>Workout saved.</Text>
+                <SessionNotes
+                  onSave={(notes) => {
+                    onSaveNotes(notes);
+                    onFinish();
+                  }}
+                  onSkip={onFinish}
+                />
+              </View>
+            ) : (
+              <>
+                {phase === TimerPhase.WORK ? null : openLogRoundId ? (
+                  // Logging REST layout: compact countdown.
+                  <Text style={[styles.compactTimerText, isCountdown && styles.timerCountdown]}>
+                    {formatTime(timeRemaining)}
                   </Text>
-                  <Text style={styles.finishStatLabel}>Time</Text>
-                </View>
-              </View>
-              <Pressable onPress={onFinish} style={styles.doneButton} accessibilityLabel="Done">
-                <Ionicons name="checkmark" size={24} color={colors.surface} />
-                <Text style={styles.doneButtonText}>DONE</Text>
-              </Pressable>
-            </View>
-          ) : (
-            <>
-              <View style={styles.ringWrap}>
-                <ProgressRing progress={phaseDuration > 0 ? timeRemaining / phaseDuration : 0} />
-                <Text style={[styles.timerText, isCountdown && styles.timerCountdown]}>
-                  {formatTime(timeRemaining)}
-                </Text>
-              </View>
+                ) : (
+                  <View style={styles.ringWrap}>
+                    <ProgressRing
+                      progress={phaseDuration > 0 ? timeRemaining / phaseDuration : 0}
+                    />
+                    <Text style={[styles.timerText, isCountdown && styles.timerCountdown]}>
+                      {formatTime(timeRemaining)}
+                    </Text>
+                  </View>
+                )}
 
-              {phase === TimerPhase.WORK ? (
-                <CueFlash cue={currentCue} />
-              ) : (
-                <Text style={styles.helperText}>{helperText}</Text>
-              )}
+                {phase === TimerPhase.WORK ? (
+                  <CueDisplay cue={showVisualCues ? currentCue : null} size={cueIconSize} />
+                ) : (
+                  <>
+                    {showVisualCues && previewCue ? <PreviewDisplay label={previewCue} /> : null}
+                    {helperText ? <Text style={styles.helperText}>{helperText}</Text> : null}
+                    {showStoppingInstruction ? (
+                      <Text style={styles.stoppingText}>{drillSettings.stoppingInstruction}</Text>
+                    ) : null}
+                    {openLogRoundId ? (
+                      // Keyed by round so an uncommitted time draft is discarded when REST ends.
+                      <RestRepLog
+                        key={openLogRoundId}
+                        roundNumber={currentRound}
+                        log={roundLogs.get(openLogRoundId)}
+                        onSetOutcome={(outcome) =>
+                          editRoundLog(openLogRoundId, { type: 'SET_OUTCOME', outcome })
+                        }
+                        onClearOutcome={() =>
+                          editRoundLog(openLogRoundId, { type: 'CLEAR_OUTCOME' })
+                        }
+                        onSetTime={(timeMs) =>
+                          editRoundLog(openLogRoundId, { type: 'SET_TIME', timeMs })
+                        }
+                        onClearTime={() => editRoundLog(openLogRoundId, { type: 'CLEAR_TIME' })}
+                      />
+                    ) : null}
+                  </>
+                )}
 
-              <RoundCount currentRound={currentRound} totalRounds={config.rounds} />
-            </>
-          )}
-        </View>
+                {openLogRoundId ? null : (
+                  <RoundCount currentRound={currentRound} totalRounds={config.rounds} />
+                )}
+              </>
+            )}
+          </ScrollView>
+        </KeyboardAvoidingView>
 
         {phase !== TimerPhase.FINISHED ? (
           <View style={styles.controls}>
@@ -488,20 +716,30 @@ const styles = StyleSheet.create({
     fontFamily: fonts.monoMedium,
     fontSize: 14,
   },
-  main: {
+  flex: {
     flex: 1,
+  },
+  main: {
+    flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 24,
+    paddingVertical: 12,
+  },
+  savedHint: {
+    color: 'rgba(255,255,255,0.7)',
+    fontFamily: fonts.sansMedium,
+    fontSize: 14,
   },
   finishWrap: {
+    alignSelf: 'stretch',
     alignItems: 'center',
     gap: 12,
   },
   finishTitle: {
     color: colors.onSurface,
     fontFamily: fonts.sansBlack,
-    fontSize: 48,
+    fontSize: 40,
     textAlign: 'center',
   },
   finishSubtitle: {
@@ -512,11 +750,11 @@ const styles = StyleSheet.create({
   finishStats: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 24,
+    gap: 16,
     marginTop: 12,
     borderRadius: 24,
     backgroundColor: 'rgba(0,0,0,0.22)',
-    paddingHorizontal: 32,
+    paddingHorizontal: 20,
     paddingVertical: 20,
   },
   finishStat: {
@@ -540,22 +778,6 @@ const styles = StyleSheet.create({
     height: 40,
     backgroundColor: 'rgba(255,255,255,0.2)',
   },
-  doneButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 20,
-    borderRadius: 999,
-    backgroundColor: colors.onSurface,
-    paddingHorizontal: 40,
-    paddingVertical: 18,
-  },
-  doneButtonText: {
-    color: colors.surface,
-    fontFamily: fonts.sansBold,
-    fontSize: 18,
-    letterSpacing: 0.8,
-  },
   ringWrap: {
     height: RING_SIZE,
     width: RING_SIZE,
@@ -576,12 +798,65 @@ const styles = StyleSheet.create({
   timerCountdown: {
     transform: [{ scale: 1.04 }],
   },
+  compactTimerText: {
+    color: 'rgba(255,255,255,0.85)',
+    fontFamily: fonts.monoBold,
+    fontSize: 44,
+    letterSpacing: -2,
+  },
+  cuePlaceholder: {
+    marginTop: 16,
+  },
+  cueDisplay: {
+    alignItems: 'center',
+    marginTop: 16,
+    borderRadius: 32,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+  },
+  cueCorrection: {
+    backgroundColor: colors.prep,
+  },
+  cueCorrectionLabel: {
+    color: colors.surface,
+    fontFamily: fonts.sansBlack,
+    fontSize: 28,
+    letterSpacing: 4,
+  },
+  cueCorrectionText: {
+    color: colors.surface,
+  },
   exerciseText: {
-    marginTop: 24,
-    minHeight: 44,
+    color: colors.onSurface,
+    fontFamily: fonts.sansBlack,
+    fontSize: 64,
+    letterSpacing: 1,
+    textAlign: 'center',
+  },
+  previewWrap: {
+    alignItems: 'center',
+    marginTop: 16,
+    borderRadius: 24,
+    backgroundColor: 'rgba(0,0,0,0.28)',
+    paddingHorizontal: 28,
+    paddingVertical: 12,
+  },
+  previewHeading: {
+    color: 'rgba(255,255,255,0.7)',
+    fontFamily: fonts.sansBold,
+    fontSize: 14,
+    letterSpacing: 2,
+  },
+  previewText: {
+    color: colors.onSurface,
+    fontFamily: fonts.sansBlack,
+    fontSize: 32,
+  },
+  stoppingText: {
+    marginTop: 8,
     color: colors.onSurface,
     fontFamily: fonts.sansBold,
-    fontSize: 36,
+    fontSize: 18,
     textAlign: 'center',
   },
   helperText: {
