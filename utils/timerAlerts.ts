@@ -1,4 +1,4 @@
-import { TimerPhase } from '../types';
+import { TimerPhase } from '../types.ts';
 
 /**
  * Work-phase countdown beeps only kick in for longer efforts; short reaction
@@ -24,3 +24,13 @@ export const shouldAnnounceRestFiveSeconds = (
   isPaused: boolean,
   hasAnnouncedRestFiveSeconds: boolean
 ) => !isPaused && phase === TimerPhase.REST && timeRemaining === 5 && !hasAnnouncedRestFiveSeconds;
+
+/** Window around a cue deadline in which a competing beep would mask cue speech. */
+export const CUE_COLLISION_WINDOW_MS = 700;
+
+/** Cue speech has priority: beeps within the window of any cue deadline are suppressed. */
+export const isNearCueEvent = (
+  elapsedWorkMs: number,
+  cueOffsetsMs: readonly number[],
+  windowMs = CUE_COLLISION_WINDOW_MS
+) => cueOffsetsMs.some((offsetMs) => Math.abs(offsetMs - elapsedWorkMs) < windowMs);

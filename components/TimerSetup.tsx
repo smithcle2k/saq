@@ -4,7 +4,8 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { TimerConfig } from '../types';
 import { colors, elevation, fonts } from '../theme';
 import { NumberInput } from './NumberInput';
-import { calculateTotalTime, formatTime } from '../utils/timeUtils';
+import { useStore } from '../store';
+import { getReactiveSessionConfig, getReactiveSetupError } from '../utils/reactiveSession';
 
 interface TimerSetupProps {
   config: TimerConfig;
@@ -21,40 +22,25 @@ export const TimerSetup: React.FC<TimerSetupProps> = ({
   onOpenSettings,
   onOpenStats,
 }) => {
-  const updateConfig = (
-    key: 'prepTime' | 'workTime' | 'restTime' | 'rounds' | 'coolDownTime',
-    value: number
-  ) => {
+  const cueOutputMode = useStore((state) => state.cueOutputMode);
+  const updateConfig = (key: 'restTime' | 'rounds', value: number) => {
     setConfig((prev) => ({ ...prev, [key]: value }));
   };
 
-  const totalDuration = calculateTotalTime(config);
+  const snapshot = getReactiveSessionConfig({ timerConfig: config, cueOutputMode });
+  const setupError = getReactiveSetupError(snapshot);
 
   return (
     <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
         <View style={styles.titleRow}>
           <Ionicons name="timer-outline" size={22} color={colors.primary} />
-          <Text style={styles.title}>Interval Trainer</Text>
+          <Text style={styles.title}>Reactive Agility</Text>
         </View>
-        <Text style={styles.subtitle}>Set your times and train</Text>
+        <Text style={styles.subtitle}>React to a random direction each round</Text>
       </View>
 
       <View style={styles.inputs}>
-        <NumberInput
-          label="Prep"
-          value={config.prepTime}
-          onChange={(v) => updateConfig('prepTime', v)}
-          step={5}
-          min={5}
-        />
-        <NumberInput
-          label="Work"
-          value={config.workTime}
-          onChange={(v) => updateConfig('workTime', v)}
-          step={1}
-          min={3}
-        />
         <NumberInput
           label="Rest"
           value={config.restTime}
@@ -71,31 +57,6 @@ export const TimerSetup: React.FC<TimerSetupProps> = ({
           min={1}
           max={100}
         />
-        <NumberInput
-          label="Cool Down"
-          value={config.coolDownTime}
-          onChange={(v) => updateConfig('coolDownTime', v)}
-          step={5}
-        />
-      </View>
-
-      <View style={styles.summaryCard}>
-        <Text style={styles.summaryLabel}>Total</Text>
-        <Text style={styles.summaryValue}>{formatTime(totalDuration)}</Text>
-      </View>
-
-      <View style={styles.sessionCard}>
-        <Text style={styles.sessionHeading}>Session Summary</Text>
-        <View style={styles.sessionRow}>
-          <Text style={styles.sessionKey}>Rounds</Text>
-          <Text style={styles.sessionValue}>{config.rounds}</Text>
-        </View>
-        <View style={styles.sessionRowLast}>
-          <Text style={styles.sessionKey}>Work / Rest</Text>
-          <Text style={styles.sessionValue}>
-            {config.workTime}s / {config.restTime}s
-          </Text>
-        </View>
       </View>
 
       <View style={styles.actions}>
@@ -117,12 +78,20 @@ export const TimerSetup: React.FC<TimerSetupProps> = ({
 
         <Pressable
           onPress={onStart}
-          style={({ pressed }) => [styles.startButton, pressed && styles.pressed]}
+          disabled={Boolean(setupError)}
+          accessibilityLabel="Start workout"
+          accessibilityState={{ disabled: Boolean(setupError) }}
+          style={({ pressed }) => [
+            styles.startButton,
+            setupError && styles.startButtonDisabled,
+            pressed && styles.pressed,
+          ]}
         >
           <Ionicons name="play" size={20} color={colors.surface} />
           <Text style={styles.startButtonText}>START</Text>
         </Pressable>
       </View>
+      {setupError ? <Text style={styles.timingError}>{setupError}</Text> : null}
     </ScrollView>
   );
 };
@@ -157,66 +126,6 @@ const styles = StyleSheet.create({
   inputs: {
     gap: 12,
   },
-  summaryCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: colors.outline,
-    backgroundColor: colors.surfaceCard,
-    paddingHorizontal: 18,
-    paddingVertical: 16,
-    ...elevation.low,
-  },
-  summaryLabel: {
-    color: colors.onSurfaceVariant,
-    fontFamily: fonts.sansMedium,
-    fontSize: 14,
-  },
-  summaryValue: {
-    color: colors.primary,
-    fontFamily: fonts.monoBold,
-    fontSize: 24,
-  },
-  sessionCard: {
-    gap: 12,
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: colors.outline,
-    backgroundColor: colors.surfaceCard,
-    padding: 18,
-  },
-  sessionHeading: {
-    color: colors.primary,
-    fontFamily: fonts.sansBold,
-    fontSize: 12,
-    letterSpacing: 1.8,
-    textTransform: 'uppercase',
-  },
-  sessionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.05)',
-    paddingBottom: 10,
-  },
-  sessionRowLast: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  sessionKey: {
-    color: colors.onSurfaceVariant,
-    fontFamily: fonts.sansMedium,
-    fontSize: 14,
-  },
-  sessionValue: {
-    color: colors.onSurface,
-    fontFamily: fonts.monoBold,
-    fontSize: 14,
-  },
   actions: {
     flexDirection: 'row',
     gap: 12,
@@ -243,11 +152,20 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     ...elevation.medium,
   },
+  startButtonDisabled: {
+    backgroundColor: colors.paused,
+  },
   startButtonText: {
     color: colors.surface,
     fontFamily: fonts.sansBold,
     fontSize: 18,
     letterSpacing: 0.8,
+  },
+  timingError: {
+    color: colors.danger,
+    fontFamily: fonts.sansMedium,
+    fontSize: 13,
+    textAlign: 'center',
   },
   pressed: {
     opacity: 0.82,

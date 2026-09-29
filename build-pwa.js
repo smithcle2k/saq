@@ -2,7 +2,7 @@ const { generateSW } = require('workbox-build');
 
 generateSW({
   globDirectory: 'dist/',
-  globPatterns: ['**/*.{html,json,js,css,woff2,ttf,png,jpg,svg,ico}'],
+  globPatterns: ['**/*.{html,json,js,css,woff2,ttf,png,jpg,svg,ico,wav,mp3}'],
   swDest: 'dist/sw.js',
   ignoreURLParametersMatching: [/^utm_/, /^fbclid$/],
   maximumFileSizeToCacheInBytes: 6000000,

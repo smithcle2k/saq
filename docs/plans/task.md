@@ -1,0 +1,24 @@
+| Task                                                                | Status   | Evidence / next step                                                                                                     |
+| ------------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Read current timer, audio, UI, persistence, and repository workflow | Complete | Inspected requested files plus App.tsx, time/history helpers, PWA build, and package scripts                             |
+| Write upgraded SAQ prompt and milestone plan                        | Complete | docs/plans/2026-09-22-saq-solo-training-plan.md; six phases with milestones, file targets and approval gates             |
+| Verify documentation and report baseline checks                     | Complete | Reviewed against inspected code; baseline: 4 tests pass, lint and TypeScript pass; documentation formatted with Prettier |
+| M1.1 — Cue rules                                                    | Complete | Deterministic shared-delay, weighting, bounds, and anti-streak tests pass                                                |
+| M1.2 — Persistence and settings                                     | Complete | Version 15 migration, current-state normalization, presets, custom delay controls, and weights added                     |
+| M1.3 — Runtime integration                                          | Complete | Active-session snapshot, hidden pending cue, delivered-event scheduling, and pause/resume scheduling tests added         |
+| Implement Phase 1                                                   | Complete | `npm test`, lint, TypeScript, and web/PWA build pass; awaiting approval for Phase 2                                      |
+| M2.1 — Cue audio                                                    | Complete | Adapter-tested clip→TTS routing; output mode is sole voice gate; pause stops audio; PWA WAV caching verified in sw.js    |
+| M2.2 — Cue presentation                                             | Complete | Cue-dominant icon display, correction styling, whistle/beep collision rules; device distance checks outstanding          |
+| Implement Phase 2                                                   | Complete | 2026-09-24 gaps closed; tests/lint/tsc/build pass; awaiting supplied cue WAV files                                       |
+| M3.1 — Session plans                                                | Complete | Deterministic Reactive/Planned/Alternating plans, previews, round records, save-once lifecycle; v17 migration            |
+| M3.2 — Extended drills                                              | Complete | Fake-out and Chain with fit validation, anti-streak across events, stopping instruction; Chromium smoke runs pass        |
+| Implement Phase 3                                                   | Complete | 45/45 tests, lint, tsc, build pass; native device checks outstanding                                                     |
+| M4.1 — Rest logging                                                 | Complete | Round-bound outcome/time edits, late-touch rejection, draft discard; REST card + decimal pad; Chromium run passes        |
+| M4.2 — Session notes                                                | Complete | Optional notes update saved session by id; double tap/skip idempotent; v18 migration keeps old history                   |
+| Implement Phase 4                                                   | Complete | Tests/lint/tsc/build pass; native one-handed and keyboard checks outstanding                                             |
+| M5.1 — Performance math                                             | Complete | Hand-calculated fixtures: %, means, signs, 4-vs-5 thresholds, delay and week/year boundaries, exclusions                 |
+| M5.2 — Statistics UI                                                | Complete | Per-cue, planned/reactive + weekly, early/late, fake-out panels with n, coverage and not-enough-data states              |
+| Implement Phase 5                                                   | Complete | 68/68 tests, lint, tsc, build pass; native rendering unchecked; awaiting approval for Phase 6                            |
+| M6.1 — Presets and warm-up                                          | Complete | Strict preset validation, atomic apply, built-ins, editable 8-min warm-up with pause/skip; v19 migration                 |
+| M6.2 — Progression and replay                                       | Complete | Opt-in stages, 3-session ≥80% rule with evidence floor, exact event replay with new id and stats exclusion               |
+| Implement Phase 6                                                   | Complete | 99/99 tests, lint, tsc, build pass; Chromium run passes; native device checks outstanding                                |

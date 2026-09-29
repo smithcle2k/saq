@@ -4,6 +4,8 @@ import beepWav from '../assets/audio/beep.wav';
 import whistleWav from '../assets/audio/whistle.wav';
 import buzzerWav from '../assets/audio/buzzer.wav';
 import { useStore } from '../store';
+import { SPOKEN_CUE_AUDIO } from './cueAudioAssets';
+import type { SpokenCueName } from './cueAudioAssets';
 
 export type AudioCueName = 'beep' | 'whistle' | 'buzzer';
 
@@ -17,6 +19,7 @@ export const useAudioCues = () => {
   const beepPlayer = useAudioPlayer(beepWav);
   const whistlePlayer = useAudioPlayer(whistleWav);
   const buzzerPlayer = useAudioPlayer(buzzerWav);
+  const spokenCuePlayer = useAudioPlayer(null);
 
   const initializeAudioCues = useCallback(async (options: InitializeAudioCueOptions = {}) => {
     if (hasPrimedAudioCues && !options.force) return;
@@ -46,7 +49,7 @@ export const useAudioCues = () => {
   );
 
   const stopAudioCues = useCallback(() => {
-    [beepPlayer, whistlePlayer, buzzerPlayer].forEach((player) => {
+    [beepPlayer, whistlePlayer, buzzerPlayer, spokenCuePlayer].forEach((player) => {
       try {
         player.pause();
         player.seekTo(0);
@@ -54,11 +57,30 @@ export const useAudioCues = () => {
         // Ignore if a player is not ready yet.
       }
     });
-  }, [beepPlayer, buzzerPlayer, whistlePlayer]);
+  }, [beepPlayer, buzzerPlayer, spokenCuePlayer, whistlePlayer]);
+
+  /** Returns false when no clip is registered or playback fails, so callers fall back to TTS. */
+  const playSpokenCue = useCallback(
+    (text: string) => {
+      const source = SPOKEN_CUE_AUDIO[text as SpokenCueName];
+      if (!source) return false;
+      try {
+        spokenCuePlayer.pause();
+        spokenCuePlayer.replace(source);
+        spokenCuePlayer.seekTo(0).catch(() => undefined);
+        spokenCuePlayer.play();
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    [spokenCuePlayer]
+  );
 
   return {
     initializeAudioCues,
     playAudioCue,
+    playSpokenCue,
     stopAudioCues,
   };
 };
