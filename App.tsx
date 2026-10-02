@@ -26,7 +26,6 @@ import type { SessionConfigSnapshot } from './types';
 import { TimerSetup } from './components/TimerSetup';
 import { ActiveTimer } from './components/ActiveTimer';
 import { Settings } from './components/Settings';
-import { Statistics } from './components/Statistics';
 import { Tutorial } from './components/Tutorial';
 import { gradients, colors } from './theme';
 import { initializeSpeech } from './utils/tts';
@@ -34,13 +33,10 @@ import { useAudioCues } from './utils/audioCues';
 import { useStore } from './store';
 import { buildSessionPlan } from './utils/drillPlan';
 import type { SessionPlan } from './utils/drillPlan';
-import { buildCompletedHistoryItem, createSessionId } from './utils/sessionHistory';
-import type { SessionDeliveryLog } from './utils/sessionHistory';
-import { attachRoundLogs } from './utils/repLogging';
-import type { RoundLogBook, SessionNotesInput } from './utils/repLogging';
+import { createSessionId } from './utils/sessionHistory';
 import { getReactiveSessionConfig, getReactiveSetupError } from './utils/reactiveSession';
 
-/** Frozen at Start so the running workout and its record describe what actually ran. */
+/** Frozen at Start so settings cannot change the running workout. */
 interface ActiveSession {
   snapshot: SessionConfigSnapshot;
   plan: SessionPlan;
@@ -87,11 +83,8 @@ function App() {
   const config = useStore((state) => state.timerConfig);
   const cueOutputMode = useStore((state) => state.cueOutputMode);
 
-  const history = useStore((state) => state.history);
   const tutorialSeen = useStore((state) => state.tutorialSeen);
   const setTimerConfig = useStore((state) => state.setTimerConfig);
-  const saveCompletedSession = useStore((state) => state.saveCompletedSession);
-  const updateSessionNotes = useStore((state) => state.updateSessionNotes);
   const setTutorialSeen = useStore((state) => state.setTutorialSeen);
 
   const outfitFontsLoaded = useOutfitFonts({
@@ -166,28 +159,6 @@ function App() {
     });
   };
 
-  // Saved once, on first reaching FINISHED; DONE or exit afterwards cannot duplicate or discard it.
-  // Round logs are all closed by then: the final REST ends before FINISHED.
-  const handleComplete = (log: SessionDeliveryLog, roundLogs: RoundLogBook) => {
-    if (!activeSession) return;
-    saveCompletedSession(
-      attachRoundLogs(
-        buildCompletedHistoryItem({
-          plan: activeSession.plan,
-          snapshot: activeSession.snapshot,
-          log,
-          completedAt: new Date(),
-        }),
-        roundLogs
-      )
-    );
-  };
-
-  const handleSaveNotes = (notes: SessionNotesInput) => {
-    if (!activeSession) return;
-    updateSessionNotes(activeSession.plan.sessionId, notes);
-  };
-
   const handleFinish = () => {
     setActiveSession(null);
     setView('SETUP');
@@ -225,8 +196,6 @@ function App() {
               plan={activeSession.plan}
               drillSettings={activeSession.snapshot.drillSettings}
               cueOutputMode={activeSession.snapshot.cueOutputMode}
-              onComplete={handleComplete}
-              onSaveNotes={handleSaveNotes}
               onFinish={handleFinish}
               onExit={handleExit}
               playAudioCue={playAudioCue}
@@ -245,18 +214,10 @@ function App() {
                       handleFirstInteraction();
                       setView('SETTINGS');
                     }}
-                    onOpenStats={() => {
-                      handleFirstInteraction();
-                      setView('STATS');
-                    }}
                   />
                 ) : null}
 
                 {view === 'SETTINGS' ? <Settings onClose={handleCloseSubView} /> : null}
-
-                {view === 'STATS' ? (
-                  <Statistics history={history} onClose={handleCloseSubView} />
-                ) : null}
               </SafeAreaView>
             </LinearGradient>
           )}

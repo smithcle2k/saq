@@ -12,7 +12,6 @@ interface TimerSetupProps {
   setConfig: React.Dispatch<React.SetStateAction<TimerConfig>>;
   onStart: () => void;
   onOpenSettings: () => void;
-  onOpenStats: () => void;
 }
 
 export const TimerSetup: React.FC<TimerSetupProps> = ({
@@ -20,7 +19,6 @@ export const TimerSetup: React.FC<TimerSetupProps> = ({
   setConfig,
   onStart,
   onOpenSettings,
-  onOpenStats,
 }) => {
   const cueOutputMode = useStore((state) => state.cueOutputMode);
   const updateConfig = (key: 'restTime' | 'rounds', value: number) => {
@@ -66,14 +64,6 @@ export const TimerSetup: React.FC<TimerSetupProps> = ({
           accessibilityLabel="Settings"
         >
           <Ionicons name="settings-outline" size={22} color={colors.onSurfaceVariant} />
-        </Pressable>
-
-        <Pressable
-          onPress={onOpenStats}
-          style={({ pressed }) => [styles.iconAction, pressed && styles.pressed]}
-          accessibilityLabel="Statistics"
-        >
-          <Ionicons name="bar-chart-outline" size={22} color={colors.onSurfaceVariant} />
         </Pressable>
 
         <Pressable

@@ -144,4 +144,4 @@ export interface WorkoutHistoryItem {
   progressionStage?: ProgressionStage;
 }
 
-export type View = 'SETUP' | 'TIMER' | 'SETTINGS' | 'STATS';
+export type View = 'SETUP' | 'TIMER' | 'SETTINGS';

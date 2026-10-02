@@ -4,9 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import {
   Animated,
-  KeyboardAvoidingView,
   Modal,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -40,11 +38,6 @@ import { useStore } from '../store';
 import { getDrillInstructions, isPreviewSecond } from '../utils/drillPlan';
 import type { SessionPlan } from '../utils/drillPlan';
 import type { DrillSettings } from '../types';
-import type { SessionDeliveryLog } from '../utils/sessionHistory';
-import { applyRoundLogEdit, createRoundLogBook, getOpenLogRoundId } from '../utils/repLogging';
-import type { RoundLogAction, RoundLogBook, SessionNotesInput } from '../utils/repLogging';
-import { RestRepLog } from './RestRepLog';
-import { SessionNotes } from './SessionNotes';
 
 interface ActiveTimerProps {
   config: TimerConfig;
@@ -53,10 +46,6 @@ interface ActiveTimerProps {
   /** Replays repeat a saved cue sequence; said once in PREP so it is never mistaken for new. */
   isReplay?: boolean;
   cueOutputMode: CueOutputMode;
-  /** Called once when FINISHED is first reached; the session is saved then. */
-  onComplete: (log: SessionDeliveryLog, roundLogs: RoundLogBook) => void;
-  /** Adds optional notes to the session already saved at FINISHED. */
-  onSaveNotes: (notes: SessionNotesInput) => void;
   onFinish: () => void;
   onExit: () => void;
   playAudioCue: (name: AudioCueName) => void;
@@ -227,8 +216,6 @@ export const ActiveTimer: React.FC<ActiveTimerProps> = ({
   drillSettings,
   isReplay = false,
   cueOutputMode,
-  onComplete,
-  onSaveNotes,
   onFinish,
   onExit,
   playAudioCue,
@@ -244,14 +231,6 @@ export const ActiveTimer: React.FC<ActiveTimerProps> = ({
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const { width: windowWidth } = useWindowDimensions();
   const cueIconSize = Math.min(220, Math.max(140, windowWidth * 0.5));
-  const [roundLogs, setRoundLogs] = useState<RoundLogBook>(createRoundLogBook);
-  // Read synchronously at FINISHED so a final-REST tap is never lost to a pending render.
-  const roundLogsRef = useRef<RoundLogBook>(roundLogs);
-
-  const handleComplete = useCallback(
-    (log: SessionDeliveryLog) => onComplete(log, roundLogsRef.current),
-    [onComplete]
-  );
 
   /** One output event: recorded clip if available, otherwise TTS; nothing in visual-only mode. */
   const announce = useCallback(
@@ -278,7 +257,6 @@ export const ActiveTimer: React.FC<ActiveTimerProps> = ({
     cuePlan,
     isPaused,
     togglePause,
-    getTimerSnapshot,
   } = useActiveTimerEngine({
     config,
     plan,
@@ -299,32 +277,7 @@ export const ActiveTimer: React.FC<ActiveTimerProps> = ({
     onPreview: (round) => {
       if (round.preview) announce(round.preview.label, { interrupt: false });
     },
-    onComplete: handleComplete,
   });
-
-  const openLogRoundId = getOpenLogRoundId(plan, phase, currentRound, config.restTime);
-
-  /** Edits are bound to the round shown; the engine's latest snapshot decides if it is still open. */
-  const editRoundLog = (roundId: string, action: RoundLogAction) => {
-    const snapshot = getTimerSnapshot();
-    const next = applyRoundLogEdit(
-      roundLogsRef.current,
-      { ...action, sessionId: plan.sessionId, roundId },
-      {
-        sessionId: plan.sessionId,
-        openRoundId: getOpenLogRoundId(
-          plan,
-          snapshot.phase,
-          snapshot.currentRound,
-          config.restTime
-        ),
-      }
-    );
-    if (next === roundLogsRef.current) return;
-    roundLogsRef.current = next;
-    setRoundLogs(next);
-  };
-  const loggedRoundCount = Array.from(roundLogs.values()).filter((log) => log.outcome).length;
 
   useEffect(() => {
     if (hasAnnouncedPrepRef.current) return;
@@ -415,10 +368,10 @@ export const ActiveTimer: React.FC<ActiveTimerProps> = ({
         ? `Replay: same cue sequence as the saved session. ${instructions}`
         : instructions;
     }
-    if (phase === TimerPhase.REST) return openLogRoundId ? '' : 'Breathe';
+    if (phase === TimerPhase.REST) return 'Breathe';
     if (phase === TimerPhase.COOL_DOWN) return 'Stretch it out';
     return '';
-  }, [phase, drillSettings, openLogRoundId, isReplay]);
+  }, [phase, drillSettings, isReplay]);
   const showStoppingInstruction =
     Boolean(drillSettings.stoppingInstruction) &&
     (phase === TimerPhase.PREP || phase === TimerPhase.REST);
@@ -477,7 +430,6 @@ export const ActiveTimer: React.FC<ActiveTimerProps> = ({
           <View style={styles.pauseOverlay}>
             <View style={styles.pauseCard}>
               <Text style={styles.pauseLabel}>End workout?</Text>
-              <Text style={styles.exitConfirmHint}>Your progress won't be saved</Text>
               <Pressable onPress={handleResumeFromExitConfirm} style={styles.resumeButton}>
                 <Ionicons name="play" size={28} color={colors.surface} />
                 <Text style={styles.resumeText}>KEEP GOING</Text>
@@ -505,10 +457,7 @@ export const ActiveTimer: React.FC<ActiveTimerProps> = ({
           </View>
         </View>
 
-        <KeyboardAvoidingView
-          style={styles.flex}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        >
+        <View style={styles.flex}>
           <ScrollView
             contentContainerStyle={styles.main}
             keyboardShouldPersistTaps="handled"
@@ -518,36 +467,13 @@ export const ActiveTimer: React.FC<ActiveTimerProps> = ({
               <View style={styles.finishWrap}>
                 <Text style={styles.finishTitle}>GREAT JOB!</Text>
                 <Text style={styles.finishSubtitle}>Workout Complete</Text>
-                <View style={styles.finishStats}>
-                  <View style={styles.finishStat}>
-                    <Text style={styles.finishStatValue}>{config.rounds}</Text>
-                    <Text style={styles.finishStatLabel}>Rounds</Text>
-                  </View>
-                  <View style={styles.finishStatDivider} />
-                  <View style={styles.finishStat}>
-                    <Text style={styles.finishStatValue}>
-                      {loggedRoundCount}/{config.rounds}
-                    </Text>
-                    <Text style={styles.finishStatLabel}>Logged</Text>
-                  </View>
-                </View>
-                <Text style={styles.savedHint}>Workout saved.</Text>
-                <SessionNotes
-                  onSave={(notes) => {
-                    onSaveNotes(notes);
-                    onFinish();
-                  }}
-                  onSkip={onFinish}
-                />
+                <Pressable onPress={onFinish} style={styles.doneButton} accessibilityRole="button">
+                  <Text style={styles.doneButtonText}>DONE</Text>
+                </Pressable>
               </View>
             ) : (
               <>
-                {phase === TimerPhase.WORK ? null : openLogRoundId ? (
-                  // Logging REST layout: compact countdown.
-                  <Text style={[styles.compactTimerText, isCountdown && styles.timerCountdown]}>
-                    {formatTime(timeRemaining)}
-                  </Text>
-                ) : (
+                {phase === TimerPhase.WORK ? null : (
                   <View style={styles.ringWrap}>
                     <ProgressRing
                       progress={phaseDuration > 0 ? timeRemaining / phaseDuration : 0}
@@ -567,34 +493,14 @@ export const ActiveTimer: React.FC<ActiveTimerProps> = ({
                     {showStoppingInstruction ? (
                       <Text style={styles.stoppingText}>{drillSettings.stoppingInstruction}</Text>
                     ) : null}
-                    {openLogRoundId ? (
-                      // Keyed by round so an uncommitted time draft is discarded when REST ends.
-                      <RestRepLog
-                        key={openLogRoundId}
-                        roundNumber={currentRound}
-                        log={roundLogs.get(openLogRoundId)}
-                        onSetOutcome={(outcome) =>
-                          editRoundLog(openLogRoundId, { type: 'SET_OUTCOME', outcome })
-                        }
-                        onClearOutcome={() =>
-                          editRoundLog(openLogRoundId, { type: 'CLEAR_OUTCOME' })
-                        }
-                        onSetTime={(timeMs) =>
-                          editRoundLog(openLogRoundId, { type: 'SET_TIME', timeMs })
-                        }
-                        onClearTime={() => editRoundLog(openLogRoundId, { type: 'CLEAR_TIME' })}
-                      />
-                    ) : null}
                   </>
                 )}
 
-                {openLogRoundId ? null : (
-                  <RoundCount currentRound={currentRound} totalRounds={config.rounds} />
-                )}
+                <RoundCount currentRound={currentRound} totalRounds={config.rounds} />
               </>
             )}
           </ScrollView>
-        </KeyboardAvoidingView>
+        </View>
 
         {phase !== TimerPhase.FINISHED ? (
           <View style={styles.controls}>
@@ -646,12 +552,6 @@ const styles = StyleSheet.create({
     fontSize: 20,
     letterSpacing: 3,
     textTransform: 'uppercase',
-  },
-  exitConfirmHint: {
-    marginTop: -12,
-    color: 'rgba(255,255,255,0.55)',
-    fontFamily: fonts.sansMedium,
-    fontSize: 15,
   },
   resumeButton: {
     flexDirection: 'row',
@@ -726,11 +626,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 12,
   },
-  savedHint: {
-    color: 'rgba(255,255,255,0.7)',
-    fontFamily: fonts.sansMedium,
-    fontSize: 14,
-  },
   finishWrap: {
     alignSelf: 'stretch',
     alignItems: 'center',
@@ -747,36 +642,17 @@ const styles = StyleSheet.create({
     fontFamily: fonts.sansSemiBold,
     fontSize: 24,
   },
-  finishStats: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    marginTop: 12,
-    borderRadius: 24,
-    backgroundColor: 'rgba(0,0,0,0.22)',
-    paddingHorizontal: 20,
-    paddingVertical: 20,
+  doneButton: {
+    marginTop: 24,
+    borderRadius: 999,
+    backgroundColor: colors.onSurface,
+    paddingHorizontal: 48,
+    paddingVertical: 18,
   },
-  finishStat: {
-    alignItems: 'center',
-    gap: 4,
-  },
-  finishStatValue: {
-    color: colors.onSurface,
-    fontFamily: fonts.monoBold,
-    fontSize: 28,
-  },
-  finishStatLabel: {
-    color: 'rgba(255,255,255,0.6)',
-    fontFamily: fonts.sansSemiBold,
-    fontSize: 12,
-    letterSpacing: 1.4,
-    textTransform: 'uppercase',
-  },
-  finishStatDivider: {
-    width: 1,
-    height: 40,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+  doneButtonText: {
+    color: colors.surface,
+    fontFamily: fonts.sansBold,
+    fontSize: 18,
   },
   ringWrap: {
     height: RING_SIZE,
@@ -797,12 +673,6 @@ const styles = StyleSheet.create({
   },
   timerCountdown: {
     transform: [{ scale: 1.04 }],
-  },
-  compactTimerText: {
-    color: 'rgba(255,255,255,0.85)',
-    fontFamily: fonts.monoBold,
-    fontSize: 44,
-    letterSpacing: -2,
   },
   cuePlaceholder: {
     marginTop: 16,
