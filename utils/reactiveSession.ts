@@ -3,7 +3,8 @@ import { DEFAULT_CUE_SETTINGS } from './cueSettings.ts';
 import { DEFAULT_CUES } from './defaultCues.ts';
 import {
   DEFAULT_DRILL_SETTINGS,
-  MIN_REACTIVE_WORK_SECONDS,
+  ONE_CUE_WORK_SECONDS,
+  TWO_CUE_WORK_SECONDS,
   validateDrillSession,
 } from './drillPlan.ts';
 
@@ -15,11 +16,11 @@ export interface ReactiveSetup {
   reactiveCueCount?: 1 | 2;
 }
 
-/** Only rounds, rest, and output mode vary; older settings cannot steer cue generation. */
+/** Build a fresh session from the selected call count, rounds, rest, and output mode. */
 export const getReactiveSessionConfig = (setup: ReactiveSetup): SessionConfigSnapshot => ({
   timerConfig: {
     prepTime: REACTIVE_PREP_SECONDS,
-    workTime: MIN_REACTIVE_WORK_SECONDS,
+    workTime: setup.reactiveCueCount === 2 ? TWO_CUE_WORK_SECONDS : ONE_CUE_WORK_SECONDS,
     restTime: setup.timerConfig.restTime,
     rounds: setup.timerConfig.rounds,
     coolDownTime: 0,

@@ -136,7 +136,7 @@ export const validateDrillSession = ({
 
   const { drillType } = drillSettings;
 
-  if (drillType === 'OPEN_REACTIVE') {
+  if (drillType === 'OPEN_REACTIVE' && drillSettings.reactiveCueCount === 2) {
     if (normalizeIntervalEnabledCues(enabledCues).length < 3) {
       return invalid(
         'REACTIVE_NEEDS_THREE_CUES',
@@ -350,11 +350,7 @@ export const buildSessionPlan = (input: BuildSessionPlanInput): SessionPlan => {
     if (condition === 'OPEN_REACTIVE') {
       const first = pool[getRandomIntInclusive(0, pool.length - 1, random)];
       const firstOffset = drawDelay(singleCueRange.minMs, singleCueRange.maxMs);
-      const randomDecider = random();
-      const hasSecondCue =
-        drillSettings.reactiveCueCount === 2 ||
-        (drillSettings.reactiveCueCount !== 1 && randomDecider < 0.5);
-      if (!hasSecondCue) {
+      if (drillSettings.reactiveCueCount === 1) {
         return {
           id,
           roundNumber,

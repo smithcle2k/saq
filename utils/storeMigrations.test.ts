@@ -236,3 +236,15 @@ test('persisted presets and progression are normalized on migration and hydratio
   });
   assert.equal(valid.warmupEnabled, true);
 });
+
+test('call count defaults for older saves and persists through migration and hydration', () => {
+  assert.equal(migratePersistedAppState({}, 19).drillSettings.reactiveCueCount, 1);
+  for (const reactiveCueCount of [1, 2] as const) {
+    const state = { drillSettings: { reactiveCueCount } };
+    assert.equal(
+      migratePersistedAppState(state, 19).drillSettings.reactiveCueCount,
+      reactiveCueCount
+    );
+    assert.equal(normalizeHydratedAppState(state).drillSettings.reactiveCueCount, reactiveCueCount);
+  }
+});

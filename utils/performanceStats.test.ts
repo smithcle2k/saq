@@ -98,6 +98,7 @@ const session = (
           fakeOutProbability: 0.25,
           correctionGapMs: 800,
           chainCueCount: 2,
+          reactiveCueCount: 1,
           stoppingInstruction,
         },
         cueOutputMode,

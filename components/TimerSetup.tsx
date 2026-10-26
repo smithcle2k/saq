@@ -21,11 +21,17 @@ export const TimerSetup: React.FC<TimerSetupProps> = ({
   onOpenSettings,
 }) => {
   const cueOutputMode = useStore((state) => state.cueOutputMode);
+  const reactiveCueCount = useStore((state) => state.drillSettings.reactiveCueCount);
+  const setReactiveCueCount = useStore((state) => state.setReactiveCueCount);
   const updateConfig = (key: 'restTime' | 'rounds', value: number) => {
     setConfig((prev) => ({ ...prev, [key]: value }));
   };
 
-  const snapshot = getReactiveSessionConfig({ timerConfig: config, cueOutputMode });
+  const snapshot = getReactiveSessionConfig({
+    timerConfig: config,
+    cueOutputMode,
+    reactiveCueCount,
+  });
   const setupError = getReactiveSetupError(snapshot);
 
   return (
@@ -35,7 +41,9 @@ export const TimerSetup: React.FC<TimerSetupProps> = ({
           <Ionicons name="timer-outline" size={22} color={colors.primary} />
           <Text style={styles.title}>Reactive Agility</Text>
         </View>
-        <Text style={styles.subtitle}>React to a random direction each round</Text>
+        <Text style={styles.subtitle}>
+          React to {reactiveCueCount} {reactiveCueCount === 1 ? 'call' : 'calls'} each round
+        </Text>
       </View>
 
       <View style={styles.inputs}>
@@ -55,6 +63,32 @@ export const TimerSetup: React.FC<TimerSetupProps> = ({
           min={1}
           max={100}
         />
+      </View>
+
+      <View style={styles.callSelector}>
+        {([1, 2] as const).map((count) => (
+          <Pressable
+            key={count}
+            onPress={() => setReactiveCueCount(count)}
+            accessibilityRole="radio"
+            accessibilityLabel={`${count} ${count === 1 ? 'call' : 'calls'} per round`}
+            accessibilityState={{ checked: reactiveCueCount === count }}
+            style={({ pressed }) => [
+              styles.callOption,
+              reactiveCueCount === count && styles.callOptionSelected,
+              pressed && styles.pressed,
+            ]}
+          >
+            <Text
+              style={[
+                styles.callOptionText,
+                reactiveCueCount === count && styles.callOptionTextSelected,
+              ]}
+            >
+              {count === 1 ? '1 Call' : '2 Calls'}
+            </Text>
+          </Pressable>
+        ))}
       </View>
 
       <View style={styles.actions}>
@@ -115,6 +149,33 @@ const styles = StyleSheet.create({
   },
   inputs: {
     gap: 12,
+  },
+  callSelector: {
+    flexDirection: 'row',
+    padding: 4,
+    gap: 4,
+    borderRadius: 20,
+    backgroundColor: colors.surfaceCard,
+    borderWidth: 1,
+    borderColor: colors.outlineStrong,
+  },
+  callOption: {
+    flex: 1,
+    minHeight: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 16,
+  },
+  callOptionSelected: {
+    backgroundColor: colors.primary,
+  },
+  callOptionText: {
+    color: colors.onSurfaceVariant,
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 16,
+  },
+  callOptionTextSelected: {
+    color: colors.surface,
   },
   actions: {
     flexDirection: 'row',

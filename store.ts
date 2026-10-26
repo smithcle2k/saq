@@ -54,6 +54,7 @@ interface AppState {
   setDrillSettings: (
     updater: DrillSettingsInput | ((prev: DrillSettings) => DrillSettingsInput)
   ) => void;
+  setReactiveCueCount: (count: 1 | 2) => void;
   setTimerConfig: (updater: TimerConfig | ((prev: TimerConfig) => TimerConfig)) => void;
   setExercises: (exercises: string[] | ((prev: string[]) => string[])) => void;
   addHistoryItem: (item: WorkoutHistoryItem) => void;
@@ -116,6 +117,13 @@ export const useStore = create<AppState>()(
           drillSettings: normalizeDrillSettings(
             typeof updater === 'function' ? updater(state.drillSettings) : updater
           ),
+        })),
+      setReactiveCueCount: (count) =>
+        set((state) => ({
+          drillSettings: normalizeDrillSettings({
+            ...state.drillSettings,
+            reactiveCueCount: count,
+          }),
         })),
       setTimerConfig: (updater) =>
         set((state) => ({
@@ -191,7 +199,8 @@ export const useStore = create<AppState>()(
       name: 'interval-trainer-storage',
       // 18: optional round outcomes/self-reported times and session notes (additive).
       // 19: saved presets, warm-up toggle and opt-in progression (additive).
-      version: 19,
+      // 20: selected number of reactive calls per round (additive).
+      version: 20,
       storage: createJSONStorage(() => AsyncStorage),
       migrate: migratePersistedAppState,
       merge: (persistedState, currentState) =>

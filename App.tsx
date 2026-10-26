@@ -82,6 +82,7 @@ function App() {
 
   const config = useStore((state) => state.timerConfig);
   const cueOutputMode = useStore((state) => state.cueOutputMode);
+  const reactiveCueCount = useStore((state) => state.drillSettings.reactiveCueCount);
 
   const tutorialSeen = useStore((state) => state.tutorialSeen);
   const setTimerConfig = useStore((state) => state.setTimerConfig);
@@ -145,6 +146,7 @@ function App() {
     const snapshot = getReactiveSessionConfig({
       timerConfig: config,
       cueOutputMode,
+      reactiveCueCount,
     });
     if (getReactiveSetupError(snapshot)) return;
     const sessionInput = {
