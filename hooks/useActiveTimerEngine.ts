@@ -11,7 +11,6 @@ import { IntervalCue } from '../utils/intervalCuePlan';
 import { getCueScheduleActions } from '../utils/cueScheduler';
 import { getDueRoundPreview, toIntervalCuePlan } from '../utils/drillPlan';
 import type { RoundPlan, SessionPlan } from '../utils/drillPlan';
-import type { SessionDeliveryLog } from '../utils/sessionHistory';
 
 export interface VisibleCue {
   /** Event identity, so consecutive identical labels still re-trigger presentation. */
@@ -26,7 +25,6 @@ interface UseActiveTimerEngineParams {
   onAnnounce: (message: string, options?: SpeakOptions) => void;
   onCueDelivered?: (cue: IntervalCue) => void;
   onPreview?: (round: RoundPlan) => void;
-  onComplete: (log: SessionDeliveryLog) => void;
 }
 
 /**
@@ -42,7 +40,6 @@ export const useActiveTimerEngine = ({
   onAnnounce,
   onCueDelivered,
   onPreview,
-  onComplete,
 }: UseActiveTimerEngineParams) => {
   const [timerSnapshot, setTimerSnapshot] = useState<TimerSnapshot>(() =>
     createInitialSnapshot(config)
@@ -56,9 +53,7 @@ export const useActiveTimerEngine = ({
   const cueScheduleStartedAtRef = useRef<number | null>(null);
   const elapsedCueScheduleMsRef = useRef(0);
   const deliveredCueIdsRef = useRef<Set<number>>(new Set());
-  const deliveredEventsRef = useRef<Map<string, number>>(new Map());
   const deliveredPreviewsRef = useRef<Set<string>>(new Set());
-  const hasCompletedRef = useRef(false);
   const { phase, timeRemaining, currentRound } = timerSnapshot;
 
   useEffect(() => {
@@ -69,10 +64,6 @@ export const useActiveTimerEngine = ({
     (roundNumber: number) => toIntervalCuePlan(plan.rounds[roundNumber - 1]),
     [plan]
   );
-
-  const getActiveWorkElapsedMs = () =>
-    elapsedCueScheduleMsRef.current +
-    (cueScheduleStartedAtRef.current === null ? 0 : Date.now() - cueScheduleStartedAtRef.current);
 
   const clearCueTimeouts = useCallback(() => {
     cueTimeoutsRef.current.forEach((timeoutId) => clearTimeout(timeoutId));
@@ -103,8 +94,6 @@ export const useActiveTimerEngine = ({
 
           deliveredCueIdsRef.current.add(cue.id);
           const eventKey = cue.eventId ?? `${roundNumber}-${cue.id}`;
-          deliveredEventsRef.current.set(eventKey, Math.round(getActiveWorkElapsedMs()));
-
           setCurrentCue({ key: eventKey, label: cue.label, role: cue.role ?? 'TARGET' });
           onCueDelivered?.(cue);
           if (cue.speak ?? true) {
@@ -149,23 +138,7 @@ export const useActiveTimerEngine = ({
       cueScheduleStartedAtRef.current = Date.now();
       scheduleCuePlan(next.cuePlan, next.currentRound);
     }
-
-    if (next.phase === TimerPhase.FINISHED && !hasCompletedRef.current) {
-      hasCompletedRef.current = true;
-      onComplete({
-        deliveredEvents: new Map(deliveredEventsRef.current),
-        deliveredPreviews: new Set(deliveredPreviewsRef.current),
-      });
-    }
-  }, [
-    timerSnapshot,
-    config,
-    getIntervalPlan,
-    onAnnounce,
-    onComplete,
-    resetCueSchedule,
-    scheduleCuePlan,
-  ]);
+  }, [timerSnapshot, config, getIntervalPlan, onAnnounce, resetCueSchedule, scheduleCuePlan]);
 
   const tick = useCallback(() => {
     const now = Date.now();
@@ -247,9 +220,6 @@ export const useActiveTimerEngine = ({
     setIsPaused(nextPaused);
   }, [isPaused, clearCueTimeouts, scheduleCuePlan]);
 
-  /** Latest committed snapshot, ahead of render; used to reject late REST input. */
-  const getTimerSnapshot = useCallback(() => timerSnapshotRef.current, []);
-
   return {
     phase,
     timeRemaining,
@@ -259,6 +229,5 @@ export const useActiveTimerEngine = ({
     cuePlan: timerSnapshot.cuePlan,
     isPaused,
     togglePause,
-    getTimerSnapshot,
   };
 };

@@ -38,6 +38,7 @@ export const DEFAULT_DRILL_SETTINGS: DrillSettings = {
   fakeOutProbability: 0.25,
   correctionGapMs: 800,
   chainCueCount: 2,
+  reactiveCueCount: 1,
   stoppingInstruction: '',
 };
 
@@ -75,6 +76,10 @@ export const normalizeDrillSettings = (input: DrillSettingsInput | undefined): D
     ),
     chainCueCount:
       clampNumber(input?.chainCueCount, DEFAULT_DRILL_SETTINGS.chainCueCount, 2, 3) >= 2.5 ? 3 : 2,
+    reactiveCueCount:
+      clampNumber(input?.reactiveCueCount, DEFAULT_DRILL_SETTINGS.reactiveCueCount, 1, 2) >= 1.5
+        ? 2
+        : 1,
     stoppingInstruction,
   };
 };
@@ -131,7 +136,7 @@ export const validateDrillSession = ({
 
   const { drillType } = drillSettings;
 
-  if (drillType === 'OPEN_REACTIVE') {
+  if (drillType === 'OPEN_REACTIVE' && drillSettings.reactiveCueCount === 2) {
     if (normalizeIntervalEnabledCues(enabledCues).length < 3) {
       return invalid(
         'REACTIVE_NEEDS_THREE_CUES',
@@ -343,10 +348,9 @@ export const buildSessionPlan = (input: BuildSessionPlanInput): SessionPlan => {
     }
 
     if (condition === 'OPEN_REACTIVE') {
-      // The second cue is optional. Its presence, target, and timing remain unknown.
       const first = pool[getRandomIntInclusive(0, pool.length - 1, random)];
       const firstOffset = drawDelay(singleCueRange.minMs, singleCueRange.maxMs);
-      if (random() >= 0.5) {
+      if (drillSettings.reactiveCueCount === 1) {
         return {
           id,
           roundNumber,

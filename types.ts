@@ -40,6 +40,7 @@ export interface DrillSettings {
   fakeOutProbability: number;
   correctionGapMs: number;
   chainCueCount: 2 | 3;
+  reactiveCueCount: 1 | 2;
   /** Text-only session context; never used to infer braking success. */
   stoppingInstruction: string;
 }
@@ -144,4 +145,4 @@ export interface WorkoutHistoryItem {
   progressionStage?: ProgressionStage;
 }
 
-export type View = 'SETUP' | 'TIMER' | 'SETTINGS' | 'STATS';
+export type View = 'SETUP' | 'TIMER' | 'SETTINGS';

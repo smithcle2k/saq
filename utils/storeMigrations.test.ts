@@ -91,6 +91,7 @@ test('migrates version 16 state to drill settings without rewriting history or o
     fakeOutProbability: 0.25,
     correctionGapMs: 800,
     chainCueCount: 2,
+    reactiveCueCount: 1,
     stoppingInstruction: '',
   });
 });
@@ -195,6 +196,7 @@ test('persisted presets and progression are normalized on migration and hydratio
       fakeOutProbability: 0.25,
       correctionGapMs: 800,
       chainCueCount: 2,
+      reactiveCueCount: 1,
       stoppingInstruction: '',
     },
     cueOutputMode: 'BOTH',
@@ -233,4 +235,16 @@ test('persisted presets and progression are normalized on migration and hydratio
     stageSetAt: '2026-09-20T00:00:00.000Z',
   });
   assert.equal(valid.warmupEnabled, true);
+});
+
+test('call count defaults for older saves and persists through migration and hydration', () => {
+  assert.equal(migratePersistedAppState({}, 19).drillSettings.reactiveCueCount, 1);
+  for (const reactiveCueCount of [1, 2] as const) {
+    const state = { drillSettings: { reactiveCueCount } };
+    assert.equal(
+      migratePersistedAppState(state, 19).drillSettings.reactiveCueCount,
+      reactiveCueCount
+    );
+    assert.equal(normalizeHydratedAppState(state).drillSettings.reactiveCueCount, reactiveCueCount);
+  }
 });

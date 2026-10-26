@@ -64,6 +64,7 @@ test('normalizes drill settings, clamping options and trimming the stopping inst
       fakeOutProbability: 1,
       correctionGapMs: 600,
       chainCueCount: 3,
+      reactiveCueCount: 1,
       stoppingInstruction: 'x'.repeat(60),
     }
   );
@@ -73,16 +74,20 @@ test('normalizes drill settings, clamping options and trimming the stopping inst
     normalizeDrillSettings({ stoppingInstruction: 'Stop ' }).stoppingInstruction,
     'Stop '
   );
+  assert.equal(normalizeDrillSettings({ reactiveCueCount: 2 }).reactiveCueCount, 2);
+  assert.equal(normalizeDrillSettings({ reactiveCueCount: 1 }).reactiveCueCount, 1);
+  assert.equal(normalizeDrillSettings({ reactiveCueCount: 5 }).reactiveCueCount, 2);
+  assert.equal(normalizeDrillSettings({ reactiveCueCount: 0 }).reactiveCueCount, 1);
   assert.equal(
     plan({ drillType: 'REACTIVE', stoppingInstruction: 'Cut and continue  ' }).stoppingInstruction,
     'Cut and continue'
   );
 });
 
-test('open reactive plans give two timed cues with a changed target and no preview', () => {
+test('open reactive plans give two timed cues with a changed target and no preview when reactiveCueCount is 2', () => {
   const sessionPlan = plan(
-    { drillType: 'OPEN_REACTIVE' },
-    { random: sequence(0.5, 0.5, 0, 0.5, 0.5) }
+    { drillType: 'OPEN_REACTIVE', reactiveCueCount: 2 },
+    { random: sequence(0.5, 0.5, 0.5, 0.5) }
   );
   assert.equal(sessionPlan.planVersion, 1);
   assert.equal(sessionPlan.rounds.length, 4);
@@ -104,10 +109,9 @@ test('open reactive plans give two timed cues with a changed target and no previ
 
 test('open reactive cue and timing draws are independent of history and saved weights', () => {
   const sessionPlan = plan(
-    { drillType: 'OPEN_REACTIVE' },
+    { drillType: 'OPEN_REACTIVE', reactiveCueCount: 1 },
     {
       random: sequence(0.5, 0.5),
-      // 0.5 for the change decision would yield a single-cue round.
       cueSettings: normalizeCueSettings({
         cueWeights: { Left: 1, Right: 10, Run: 1, 'Come Back': 1 },
       }),
@@ -118,25 +122,32 @@ test('open reactive cue and timing draws are independent of history and saved we
   assert.ok(sessionPlan.rounds.every((round) => round.events.length === 1));
 });
 
-test('cue count and second-cue timing both vary across open reactive rounds', () => {
-  const sessionPlan = plan(
-    { drillType: 'OPEN_REACTIVE' },
-    { random: sequence(0.5, 0.5, 0.9, 0.5, 0.5, 0, 0.5, 0.5) }
+test('open reactive generates strictly 1 or 2 calls based on reactiveCueCount', () => {
+  const oneCallPlan = plan(
+    { drillType: 'OPEN_REACTIVE', reactiveCueCount: 1 },
+    { random: sequence(0.5, 0.5, 0.5, 0.5) }
   );
   assert.deepEqual(
-    sessionPlan.rounds.map((round) => round.events.length),
-    [1, 2, 1, 2]
+    oneCallPlan.rounds.map((round) => round.events.length),
+    [1, 1, 1, 1]
+  );
+
+  const twoCallPlan = plan(
+    { drillType: 'OPEN_REACTIVE', reactiveCueCount: 2 },
+    { random: sequence(0.5, 0.5, 0.5, 0.5) }
   );
   assert.deepEqual(
-    sessionPlan.rounds
-      .filter((round) => round.events.length === 2)
-      .map((round) => round.events[1].offsetMs),
-    [3500, 3500]
+    twoCallPlan.rounds.map((round) => round.events.length),
+    [2, 2, 2, 2]
+  );
+  assert.deepEqual(
+    twoCallPlan.rounds.map((round) => round.events[1].offsetMs),
+    [3500, 3500, 3500, 3500]
   );
 
   const varied = plan(
-    { drillType: 'OPEN_REACTIVE' },
-    { config: { ...config, rounds: 2 }, random: sequence(0, 0, 0, 0, 0, 0.8, 0.9, 0, 0.5, 0.6) }
+    { drillType: 'OPEN_REACTIVE', reactiveCueCount: 2 },
+    { config: { ...config, rounds: 2 }, random: sequence(0, 0, 0, 0, 0.8, 0.9, 0.5, 0.6) }
   );
   assert.deepEqual(
     varied.rounds.map((round) => round.events[1].offsetMs),
@@ -146,7 +157,7 @@ test('cue count and second-cue timing both vary across open reactive rounds', ()
 
 test('open reactive changes need three cues and at least eight seconds of work', () => {
   const input = {
-    drillSettings: normalizeDrillSettings({ drillType: 'OPEN_REACTIVE' }),
+    drillSettings: normalizeDrillSettings({ drillType: 'OPEN_REACTIVE', reactiveCueCount: 2 }),
     cueSettings,
     enabledCues: allCues,
     config,
@@ -158,8 +169,10 @@ test('open reactive changes need three cues and at least eight seconds of work',
 });
 
 test('both open reactive cues reach the runtime schedule and are spoken', () => {
-  const round = plan({ drillType: 'OPEN_REACTIVE' }, { random: sequence(0.5, 0.5, 0, 0.5, 0.5) })
-    .rounds[0];
+  const round = plan(
+    { drillType: 'OPEN_REACTIVE', reactiveCueCount: 2 },
+    { random: sequence(0.5, 0.5, 0.5, 0.5) }
+  ).rounds[0];
   const runtime = toIntervalCuePlan(round);
   assert.deepEqual(
     runtime.cuePlan.map(({ label, offsetMs, role, speak }) => ({ label, offsetMs, role, speak })),

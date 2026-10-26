@@ -77,37 +77,60 @@ test('builds a completed history item keyed by the session id', () => {
   assert.equal(item.session?.rounds[0].preview?.status, 'DELIVERED');
 });
 
-test('stores the actual duration of mixed reactive rounds', () => {
-  const reactiveSnapshot: SessionConfigSnapshot = {
+test('stores the actual duration of reactive rounds', () => {
+  const reactiveSnapshot1: SessionConfigSnapshot = {
     ...snapshot,
-    timerConfig: { ...snapshot.timerConfig, workTime: 8 },
+    timerConfig: { ...snapshot.timerConfig, workTime: 8, rounds: 1 },
     enabledCues: ['Left', 'Right', 'Run', 'Come Back'],
-    drillSettings: normalizeDrillSettings({ drillType: 'OPEN_REACTIVE' }),
+    drillSettings: normalizeDrillSettings({ drillType: 'OPEN_REACTIVE', reactiveCueCount: 1 }),
   };
-  const reactivePlan = buildSessionPlan({
-    sessionId: 'mixed',
-    drillSettings: reactiveSnapshot.drillSettings,
-    cueSettings: reactiveSnapshot.cueSettings,
-    enabledCues: reactiveSnapshot.enabledCues,
-    config: reactiveSnapshot.timerConfig,
-    random: (() => {
-      const draws = [0, 0, 0.75, 0, 0, 0.25, 0, 0];
-      let index = 0;
-      return () => draws[index++] ?? 0;
-    })(),
+  const plan1 = buildSessionPlan({
+    sessionId: 'one-call',
+    drillSettings: reactiveSnapshot1.drillSettings,
+    cueSettings: reactiveSnapshot1.cueSettings,
+    enabledCues: reactiveSnapshot1.enabledCues,
+    config: reactiveSnapshot1.timerConfig,
+    random: () => 0,
   });
   assert.deepEqual(
-    reactivePlan.rounds.map((round) => round.events.length),
-    [1, 2]
+    plan1.rounds.map((round) => round.events.length),
+    [1]
   );
 
-  const item = buildCompletedHistoryItem({
-    plan: reactivePlan,
-    snapshot: reactiveSnapshot,
+  const item1 = buildCompletedHistoryItem({
+    plan: plan1,
+    snapshot: reactiveSnapshot1,
     log: { deliveredEvents: new Map(), deliveredPreviews: new Set() },
     completedAt: new Date('2026-09-24T10:00:00.000Z'),
   });
-  assert.equal(item.duration, 10 + 5 + 8 + 20 * 2);
+  assert.equal(item1.duration, 10 + 5 + 20);
+
+  const reactiveSnapshot2: SessionConfigSnapshot = {
+    ...snapshot,
+    timerConfig: { ...snapshot.timerConfig, workTime: 8, rounds: 1 },
+    enabledCues: ['Left', 'Right', 'Run', 'Come Back'],
+    drillSettings: normalizeDrillSettings({ drillType: 'OPEN_REACTIVE', reactiveCueCount: 2 }),
+  };
+  const plan2 = buildSessionPlan({
+    sessionId: 'two-call',
+    drillSettings: reactiveSnapshot2.drillSettings,
+    cueSettings: reactiveSnapshot2.cueSettings,
+    enabledCues: reactiveSnapshot2.enabledCues,
+    config: reactiveSnapshot2.timerConfig,
+    random: () => 0,
+  });
+  assert.deepEqual(
+    plan2.rounds.map((round) => round.events.length),
+    [2]
+  );
+
+  const item2 = buildCompletedHistoryItem({
+    plan: plan2,
+    snapshot: reactiveSnapshot2,
+    log: { deliveredEvents: new Map(), deliveredPreviews: new Set() },
+    completedAt: new Date('2026-09-24T10:00:00.000Z'),
+  });
+  assert.equal(item2.duration, 10 + 8 + 20);
 });
 
 test('saves a completed session once even if completion is reported twice', () => {
