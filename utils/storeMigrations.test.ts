@@ -91,6 +91,7 @@ test('migrates version 16 state to drill settings without rewriting history or o
     fakeOutProbability: 0.25,
     correctionGapMs: 800,
     chainCueCount: 2,
+    reactiveCueCount: 1,
     stoppingInstruction: '',
   });
 });
@@ -195,6 +196,7 @@ test('persisted presets and progression are normalized on migration and hydratio
       fakeOutProbability: 0.25,
       correctionGapMs: 800,
       chainCueCount: 2,
+      reactiveCueCount: 1,
       stoppingInstruction: '',
     },
     cueOutputMode: 'BOTH',

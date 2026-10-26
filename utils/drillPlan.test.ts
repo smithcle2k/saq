@@ -64,6 +64,7 @@ test('normalizes drill settings, clamping options and trimming the stopping inst
       fakeOutProbability: 1,
       correctionGapMs: 600,
       chainCueCount: 3,
+      reactiveCueCount: 1,
       stoppingInstruction: 'x'.repeat(60),
     }
   );
@@ -73,6 +74,10 @@ test('normalizes drill settings, clamping options and trimming the stopping inst
     normalizeDrillSettings({ stoppingInstruction: 'Stop ' }).stoppingInstruction,
     'Stop '
   );
+  assert.equal(normalizeDrillSettings({ reactiveCueCount: 2 }).reactiveCueCount, 2);
+  assert.equal(normalizeDrillSettings({ reactiveCueCount: 1 }).reactiveCueCount, 1);
+  assert.equal(normalizeDrillSettings({ reactiveCueCount: 5 }).reactiveCueCount, 2);
+  assert.equal(normalizeDrillSettings({ reactiveCueCount: 0 }).reactiveCueCount, 1);
   assert.equal(
     plan({ drillType: 'REACTIVE', stoppingInstruction: 'Cut and continue  ' }).stoppingInstruction,
     'Cut and continue'

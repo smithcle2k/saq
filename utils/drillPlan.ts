@@ -38,6 +38,7 @@ export const DEFAULT_DRILL_SETTINGS: DrillSettings = {
   fakeOutProbability: 0.25,
   correctionGapMs: 800,
   chainCueCount: 2,
+  reactiveCueCount: 1,
   stoppingInstruction: '',
 };
 
@@ -75,6 +76,10 @@ export const normalizeDrillSettings = (input: DrillSettingsInput | undefined): D
     ),
     chainCueCount:
       clampNumber(input?.chainCueCount, DEFAULT_DRILL_SETTINGS.chainCueCount, 2, 3) >= 2.5 ? 3 : 2,
+    reactiveCueCount:
+      clampNumber(input?.reactiveCueCount, DEFAULT_DRILL_SETTINGS.reactiveCueCount, 1, 2) >= 1.5
+        ? 2
+        : 1,
     stoppingInstruction,
   };
 };
