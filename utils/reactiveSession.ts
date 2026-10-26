@@ -12,6 +12,7 @@ export const REACTIVE_PREP_SECONDS = 10;
 export interface ReactiveSetup {
   timerConfig: TimerConfig;
   cueOutputMode: CueOutputMode;
+  reactiveCueCount?: 1 | 2;
 }
 
 /** Only rounds, rest, and output mode vary; older settings cannot steer cue generation. */
@@ -28,7 +29,11 @@ export const getReactiveSessionConfig = (setup: ReactiveSetup): SessionConfigSna
     ...DEFAULT_CUE_SETTINGS,
     cueWeights: { ...DEFAULT_CUE_SETTINGS.cueWeights },
   },
-  drillSettings: { ...DEFAULT_DRILL_SETTINGS, drillType: 'OPEN_REACTIVE' },
+  drillSettings: {
+    ...DEFAULT_DRILL_SETTINGS,
+    drillType: 'OPEN_REACTIVE',
+    reactiveCueCount: setup.reactiveCueCount ?? DEFAULT_DRILL_SETTINGS.reactiveCueCount,
+  },
   cueOutputMode: setup.cueOutputMode,
 });
 

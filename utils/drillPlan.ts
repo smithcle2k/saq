@@ -348,10 +348,13 @@ export const buildSessionPlan = (input: BuildSessionPlanInput): SessionPlan => {
     }
 
     if (condition === 'OPEN_REACTIVE') {
-      // The second cue is optional. Its presence, target, and timing remain unknown.
       const first = pool[getRandomIntInclusive(0, pool.length - 1, random)];
       const firstOffset = drawDelay(singleCueRange.minMs, singleCueRange.maxMs);
-      if (random() >= 0.5) {
+      const randomDecider = random();
+      const hasSecondCue =
+        drillSettings.reactiveCueCount === 2 ||
+        (drillSettings.reactiveCueCount !== 1 && randomDecider < 0.5);
+      if (!hasSecondCue) {
         return {
           id,
           roundNumber,
